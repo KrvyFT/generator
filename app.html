@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>处方工作台</title>
+    <style>
+        :root {
+            --theme-main: #d6bebf;
+            --theme-dark: #6f5758;
+            --theme-soft: #f7f1f1;
+            --theme-panel: #fffdfc;
+            --theme-border: #e7d7d7;
+            --theme-text: #3f2f30;
+            --theme-sub: #826e70;
+            --theme-accent: #b7848a;
+        }
+
+        body {
+            margin: 0;
+            background: radial-gradient(circle at top, #f6ecec 0%, #f2e6e7 35%, #efe2e3 100%);
+            color: var(--theme-text);
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        }
+
+        .wrap {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 16px;
+        }
+
+        .auth-wrap {
+            max-width: 460px;
+            margin: 40px auto;
+        }
+
+        .card {
+            background: var(--theme-panel);
+            border: 1px solid var(--theme-border);
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 16px;
+            box-shadow: 0 12px 30px rgba(111, 87, 88, 0.12);
+        }
+
+        h2 {
+            margin: 0 0 12px;
+        }
+
+        .auth-title {
+            margin: 0 0 6px;
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: .4px;
+        }
+
+        .auth-subtitle {
+            margin: 0 0 14px;
+            color: var(--theme-sub);
+            font-size: 13px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            margin: 8px 0 4px;
+            color: var(--theme-sub);
+        }
+
+        input,
+        button {
+            width: 100%;
+            box-sizing: border-box;
+            border-radius: 8px;
+            border: 1px solid var(--theme-border);
+            background: #fff;
+            color: var(--theme-text);
+            padding: 10px;
+        }
+
+        button {
+            cursor: pointer;
+            background: var(--theme-main);
+            border: none;
+            font-weight: 700;
+            transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(111, 87, 88, 0.2);
+        }
+
+        .btn2 {
+            background: #cda3a8;
+        }
+
+        .btn3 {
+            background: #c2a2a5;
+        }
+
+        .btn4 {
+            background: var(--theme-dark);
+            color: #fff;
+        }
+
+        .hint {
+            color: var(--theme-sub);
+            font-size: 13px;
+        }
+
+        .result {
+            margin-top: 8px;
+            min-height: 22px;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .auth-panel {
+            background: linear-gradient(180deg, #fffefe 0%, #faf5f5 100%);
+            border: 1px solid var(--theme-border);
+            border-radius: 10px;
+            padding: 14px;
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity .18s ease, transform .18s ease;
+        }
+
+        .auth-panel.hidden {
+            display: none;
+            opacity: 0;
+            transform: translateY(4px);
+        }
+
+        .auth-actions {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .switch-link {
+            display: inline-block;
+            color: var(--theme-dark);
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+            border: none;
+            background: transparent;
+            padding: 0;
+            width: auto;
+        }
+
+        .switch-link:hover {
+            color: var(--theme-accent);
+            text-decoration: underline;
+        }
+
+        .toolbar {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(120px, 1fr));
+            gap: 10px;
+            margin: 10px 0 12px;
+        }
+
+        .iframe-shell {
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--theme-border);
+            background: #fff;
+        }
+
+        iframe {
+            width: 100%;
+            height: 78vh;
+            border: 0;
+            background: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <div id="authCard" class="card auth-wrap">
+            <h2 class="auth-title">欢迎使用工作台</h2>
+            <p class="auth-subtitle">请先登录账号后继续操作</p>
+
+            <div id="loginPanel" class="auth-panel">
+                <h3>登录</h3>
+                <label>用户名</label><input id="loginUsername" />
+                <label>密码</label><input id="loginPassword" type="password" />
+                <div class="auth-actions">
+                    <button id="loginBtn">登录</button>
+                </div>
+                <div class="auth-actions">
+                    <button id="toRegisterBtn" class="switch-link" type="button">没有账号？注册账号</button>
+                </div>
+            </div>
+
+            <div id="registerPanel" class="auth-panel hidden">
+                <h3>注册</h3>
+                <label>用户名</label><input id="regUsername" />
+                <label>密码</label><input id="regPassword" type="password" />
+                <label>邀请码</label><input id="regInvite" />
+                <div class="hint">邀请码请发送邮件至 krvyft@pm.me 获取</div>
+                <div class="auth-actions">
+                    <button id="registerBtn" class="btn2">注册</button>
+                </div>
+                <div class="auth-actions">
+                    <button id="toLoginBtn" class="switch-link" type="button">已有账号？返回登录</button>
+                </div>
+            </div>
+            <div id="authResult" class="result"></div>
+        </div>
+
+        <div id="workspaceCard" class="card hidden">
+            <h2>生成器</h2>
+            <div class="hint" id="userHint"></div>
+            <div class="toolbar">
+                <button id="aiBtn" class="btn2">AI 生成处方</button>
+                <button id="randBtn" class="btn2">随机编号</button>
+                <button id="saveBtn" class="btn3">保存工作区</button>
+                <button id="loadBtn" class="btn3">加载最近</button>
+                <button id="pdfBtn" class="btn4">下载 PDF</button>
+                <button id="logoutBtn">退出登录</button>
+            </div>
+            <div class="iframe-shell">
+                <iframe id="presentationFrame" src="/presentation"></iframe>
+            </div>
+            <div id="workResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.API_BASE || "";
+        const TOKEN_KEY = "generator_token";
+
+        const authCard = document.getElementById("authCard");
+        const workspaceCard = document.getElementById("workspaceCard");
+        const authResult = document.getElementById("authResult");
+        const workResult = document.getElementById("workResult");
+        const userHint = document.getElementById("userHint");
+        const presentationFrame = document.getElementById("presentationFrame");
+        const loginPanel = document.getElementById("loginPanel");
+        const registerPanel = document.getElementById("registerPanel");
+
+        function token() { return localStorage.getItem(TOKEN_KEY) || ""; }
+        function setToken(v) { localStorage.setItem(TOKEN_KEY, v); }
+        function clearAuth() { localStorage.removeItem(TOKEN_KEY); }
+
+        function bridge() {
+            return presentationFrame.contentWindow && presentationFrame.contentWindow.PresentationBridge;
+        }
+
+        async function waitBridge(timeout = 10000) {
+            const start = Date.now();
+            while (Date.now() - start < timeout) {
+                if (bridge()) return bridge();
+                await new Promise(r => setTimeout(r, 100));
+            }
+            throw new Error("功能页面加载超时");
+        }
+
+        async function callApi(path, method = "GET", body = null, auth = false) {
+            const headers = { "Content-Type": "application/json" };
+            if (auth) headers.Authorization = `Bearer ${token()}`;
+            return fetch(`${API_BASE}${path}`, {
+                method,
+                headers,
+                body: body ? JSON.stringify(body) : undefined
+            });
+        }
+
+        function enterWorkspace(username) {
+            authCard.classList.add("hidden");
+            workspaceCard.classList.remove("hidden");
+            userHint.textContent = `当前用户：${username}`;
+        }
+
+        function backToAuth() {
+            workspaceCard.classList.add("hidden");
+            authCard.classList.remove("hidden");
+            userHint.textContent = "";
+            showLoginPanel();
+        }
+
+        function showLoginPanel() {
+            registerPanel.classList.add("hidden");
+            loginPanel.classList.remove("hidden");
+        }
+
+        function showRegisterPanel() {
+            loginPanel.classList.add("hidden");
+            registerPanel.classList.remove("hidden");
+        }
+
+        document.getElementById("toRegisterBtn").onclick = () => {
+            authResult.textContent = "";
+            showRegisterPanel();
+        };
+
+        document.getElementById("toLoginBtn").onclick = () => {
+            authResult.textContent = "";
+            showLoginPanel();
+        };
+
+        document.getElementById("registerBtn").onclick = async () => {
+            authResult.textContent = "注册中...";
+            const resp = await callApi("/api/register", "POST", {
+                username: document.getElementById("regUsername").value.trim(),
+                password: document.getElementById("regPassword").value,
+                invite_code: document.getElementById("regInvite").value.trim()
+            });
+            const data = await resp.json().catch(() => ({}));
+            authResult.textContent = data.message || `HTTP ${resp.status}`;
+            if (resp.ok && data.success) {
+                showLoginPanel();
+            }
+        };
+
+        document.getElementById("loginPassword").addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                document.getElementById("loginBtn").click();
+            }
+        });
+
+        document.getElementById("regInvite").addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                document.getElementById("registerBtn").click();
+            }
+        });
+
+        document.getElementById("loginBtn").onclick = async () => {
+            authResult.textContent = "登录中...";
+            const resp = await callApi("/api/login", "POST", {
+                username: document.getElementById("loginUsername").value.trim(),
+                password: document.getElementById("loginPassword").value
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (resp.ok && data.success && data.token) {
+                setToken(data.token);
+                enterWorkspace(data.username || "用户");
+                authResult.textContent = "登录成功";
+            } else {
+                authResult.textContent = data.message || `登录失败（HTTP ${resp.status}）`;
+            }
+        };
+
+        document.getElementById("aiBtn").onclick = async () => {
+            workResult.textContent = "AI 生成中...";
+            try {
+                const b = await waitBridge();
+                const state = b.exportState ? b.exportState() : {};
+                const formValues = (state && state.formValues) || {};
+                const diagText = String(formValues.a5Diag || formValues.a4Diag || "").trim();
+                if (!diagText) {
+                    throw new Error("请先输入临床诊断");
+                }
+
+                const resp = await callApi("/api/prescription/generate", "POST", { diag_text: diagText });
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok || !data.success || !data.result) {
+                    throw new Error(data.message || `HTTP ${resp.status}`);
+                }
+
+                if (b.applyPrescriptionResult) {
+                    b.applyPrescriptionResult(String(data.result).trim());
+                }
+                workResult.textContent = "AI 生成完成";
+            } catch (err) {
+                workResult.textContent = `失败：${err.message || err}`;
+            }
+        };
+
+        document.getElementById("randBtn").onclick = async () => {
+            workResult.textContent = "随机中...";
+            try {
+                const b = await waitBridge();
+                const resp = await callApi("/api/prescription/random", "GET");
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok || !data.success) {
+                    throw new Error(data.message || `HTTP ${resp.status}`);
+                }
+
+                if (b.applyRandomData) {
+                    b.applyRandomData(data);
+                }
+                workResult.textContent = "随机完成";
+            } catch (err) {
+                workResult.textContent = `失败：${err.message || err}`;
+            }
+        };
+
+        document.getElementById("saveBtn").onclick = async () => {
+            workResult.textContent = "保存中...";
+            try {
+                const b = await waitBridge();
+                const state = b.exportState();
+                const resp = await callApi("/api/workspace/save", "POST", {
+                    title: "presentation-workspace",
+                    payload: state
+                }, true);
+                const data = await resp.json().catch(() => ({}));
+                workResult.textContent = data.message || (resp.ok ? "保存成功" : `失败（HTTP ${resp.status}）`);
+            } catch (err) {
+                workResult.textContent = `失败：${err.message || err}`;
+            }
+        };
+
+        document.getElementById("loadBtn").onclick = async () => {
+            workResult.textContent = "加载中...";
+            try {
+                const resp = await callApi("/api/workspace/latest", "GET", null, true);
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok || !data.success || !data.payload) {
+                    workResult.textContent = data.message || `失败（HTTP ${resp.status}）`;
+                    return;
+                }
+                const b = await waitBridge();
+                b.importState(data.payload);
+                workResult.textContent = `已加载：${data.title || "presentation-workspace"}`;
+            } catch (err) {
+                workResult.textContent = `失败：${err.message || err}`;
+            }
+        };
+
+        document.getElementById("pdfBtn").onclick = async () => {
+            workResult.textContent = "生成 PDF 中...";
+            try {
+                const b = await waitBridge();
+                if (!b.capturePaperImage) {
+                    throw new Error("功能页面不支持截图导出");
+                }
+
+                const imageDataUrl = await b.capturePaperImage();
+                const state = b.exportState ? b.exportState() : {};
+                const pageMode = state && state.mode ? state.mode : "prescription";
+
+                const resp = await callApi("/api/pdf/generate", "POST", {
+                    title: "处方导出",
+                    image_data_url: imageDataUrl,
+                    page_mode: pageMode,
+                    note: "由系统后端生成图片版 PDF"
+                }, true);
+
+                if (!resp.ok) {
+                    const errData = await resp.json().catch(() => ({}));
+                    throw new Error(errData.message || `HTTP ${resp.status}`);
+                }
+
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "prescription-export.pdf";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                workResult.textContent = "PDF 下载已开始（后端生成）";
+            } catch (err) {
+                workResult.textContent = `失败：${err.message || err}`;
+            }
+        };
+
+        document.getElementById("logoutBtn").onclick = () => {
+            clearAuth();
+            backToAuth();
+            workResult.textContent = "已退出";
+        };
+
+        (async () => {
+            if (!token()) return;
+            const resp = await callApi("/api/me", "GET", null, true);
+            const data = await resp.json().catch(() => ({}));
+            if (resp.ok && data.success && data.user?.username) {
+                enterWorkspace(data.user.username);
+            } else {
+                clearAuth();
+            }
+        })();
+    </script>
+</body>
+
+</html>

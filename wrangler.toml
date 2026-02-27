@@ -1,0 +1,22 @@
+name = "generator"
+main = "build/index.js"
+compatibility_date = "2026-02-27"
+
+[build]
+command = "[ -x \"$HOME/.cargo/bin/worker-build\" ] || cargo install -q worker-build --version 0.7.5 && $HOME/.cargo/bin/worker-build --release"
+
+[vars]
+SUPPORT_EMAIL = "krvyft@pm.me"
+CORS_ORIGIN = "*"
+RATE_LIMIT_MAX = "5"
+RATE_LIMIT_WINDOW_SECS = "60"
+SESSION_TTL_SECS = "86400"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "generator-db"
+database_id = "0385b9fa-8acc-4652-bd88-e5232a433544"
+
+[[kv_namespaces]]
+binding = "KV_LIMITER"
+id = "b6363c5e1e244571a2c19bc469f2c2d1"

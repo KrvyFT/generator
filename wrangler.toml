@@ -2,9 +2,6 @@ name = "generator"
 main = "build/index.js"
 compatibility_date = "2026-02-27"
 
-[build]
-command = "[ -x \"$HOME/.cargo/bin/worker-build\" ] || cargo install -q worker-build --version 0.7.5 && $HOME/.cargo/bin/worker-build --release"
-
 [vars]
 SUPPORT_EMAIL = "krvyft@pm.me"
 CORS_ORIGIN = "*"

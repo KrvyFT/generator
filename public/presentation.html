@@ -419,9 +419,167 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
     filter: blur(0.4px);
   }
 
+  #pgFinalRoot .mobile-toolbar-toggle {
+    display: none;
+    width: 100%;
+    border: 1px solid var(--pg-panel-border);
+    background: var(--pg-theme-main);
+    color: #3f2f30;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    margin-bottom: 6px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
   @media (max-width: 1220px) {
     #pgFinalRoot .pg-layout {
       grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 900px) {
+
+    #pgFinalRoot .warning-box,
+    #pgFinalRoot .pg-wrap {
+      padding: 0.75rem;
+    }
+
+    #pgFinalRoot .paper-shell {
+      padding: 0.75rem;
+      min-height: 520px;
+    }
+
+    #pgFinalRoot .canvas-wrapper {
+      min-height: 460px;
+    }
+
+    #pgFinalRoot .controls {
+      padding: 12px;
+      border-radius: 12px;
+    }
+
+    #pgFinalRoot .controls-header {
+      font-size: 15px;
+      margin-bottom: 10px;
+    }
+
+    #pgFinalRoot .hospital-input {
+      width: min(100%, 280px);
+      font-size: 20px;
+    }
+
+    #pgFinalRoot .diag-hosp-name {
+      font-size: 28px;
+    }
+
+    #pgFinalRoot .diag-title-name {
+      font-size: 26px;
+      letter-spacing: 12px;
+      padding-left: 12px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    #pgFinalRoot .warning-box {
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    #pgFinalRoot .pg-wrap {
+      padding: 0.6rem;
+      border-radius: 12px;
+    }
+
+    #pgFinalRoot .paper-shell {
+      padding: 0.5rem;
+      min-height: 420px;
+      border-radius: 10px;
+    }
+
+    #pgFinalRoot .canvas-wrapper {
+      min-height: 360px;
+    }
+
+    #pgFinalRoot .controls {
+      padding: 10px;
+      border-radius: 10px;
+    }
+
+    #pgFinalRoot .control-group {
+      margin-bottom: 10px;
+    }
+
+    #pgFinalRoot .control-group label,
+    #pgFinalRoot .section-title {
+      font-size: 11px;
+    }
+
+    #pgFinalRoot .control-group input[type="text"],
+    #pgFinalRoot .control-group select,
+    #pgFinalRoot .control-group input[type="color"],
+    #pgFinalRoot .btn {
+      min-height: 40px;
+    }
+
+    #pgFinalRoot .btn {
+      font-size: 13px;
+      padding: 9px;
+    }
+
+    #pgFinalRoot .hospital-input {
+      width: min(100%, 220px);
+      font-size: 16px;
+    }
+
+    #pgFinalRoot .difang-box {
+      font-size: 13px;
+      letter-spacing: 3px;
+      padding: 2px 8px;
+    }
+
+    #pgFinalRoot .diag-hosp-name {
+      font-size: 22px;
+    }
+
+    #pgFinalRoot .diag-title-name {
+      font-size: 20px;
+      letter-spacing: 8px;
+      padding-left: 8px;
+    }
+  }
+
+  @media (max-width: 420px) {
+
+    #pgFinalRoot .warning-box,
+    #pgFinalRoot .pg-wrap {
+      padding: 0.5rem;
+    }
+
+    #pgFinalRoot .paper-shell,
+    #pgFinalRoot .controls {
+      padding: 8px;
+    }
+
+    #pgFinalRoot .canvas-wrapper {
+      min-height: 320px;
+    }
+
+    #pgFinalRoot .controls-header {
+      font-size: 14px;
+    }
+
+    #pgFinalRoot .btn {
+      margin-top: 6px;
+    }
+
+    #pgFinalRoot .mobile-toolbar-toggle {
+      display: block;
+    }
+
+    #pgFinalRoot .controls.is-collapsed {
+      display: none;
     }
   }
 </style>
@@ -517,8 +675,8 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
                           style="position:absolute;right:0;bottom:.08em;font-size:.6em;">x</span></span>
                     </div>
                     <textarea id="a5Rx" oninput="App.syncContent('rx', this)"
-                      style="width:100%;flex-grow:1;border:none;outline:none;resize:none;font-family:inherit;font-size:14px;line-height:1.8;background:transparent;padding-left:5px;">1. 草酸艾司西酞普兰片(10mg/片) 50片/20mg Qd 口服
-2. 劳拉西泮片 (0.5mg/片) 10片/0.5mg Prn 口服</textarea>
+                      style="width:100%;flex-grow:1;border:none;outline:none;resize:none;font-family:inherit;font-size:14px;line-height:1.8;background:transparent;padding-left:5px;">
+</textarea>
 
                     <div
                       style="display:flex;justify-content:space-between;align-items:flex-end;font-size:14px;margin-top:5px;padding-bottom:5px;">
@@ -574,8 +732,8 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
 
                 <div class="diag-text-block flex-grow">
                   <span style="font-weight:bold;">处理意见：</span>
-                  <textarea id="a4Rx" class="diag-textarea" oninput="App.syncContent('rx', this)">1. 草酸艾司西酞普兰片(10mg/片) 50片/20mg Qd 口服。
-2. 劳拉西泮片 (0.5mg/片) 10片/0.5mg Prn 口服</textarea>
+                  <textarea id="a4Rx" class="diag-textarea" oninput="App.syncContent('rx', this)">
+</textarea>
                   <textarea class="diag-textarea" style="padding-top:5px;" placeholder="其他非药物医嘱（不同步到处方）...">3. 若出现严重自杀观念、激越、失眠加重等，立即就诊或急诊。
 4. 按时服药，不可擅自停药或骤停</textarea>
                 </div>
@@ -602,6 +760,8 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
         </div>
       </div>
 
+      <button id="mobileToolbarToggle" class="mobile-toolbar-toggle" type="button" aria-expanded="false">🛠️
+        展开工具栏</button>
       <div class="controls" id="draggableControls">
         <h3 class="controls-header"><span style="margin-right: 6px;">🛠️</span> 控制面板</h3>
         <div class="control-group"><button class="btn btn-black" id="modeToggleBtn" onclick="App.toggleMode()"
@@ -1248,8 +1408,40 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
       return canvas.toDataURL('image/jpeg', 0.92);
     }
 
+    function setupMobileToolbarToggle() {
+      const toggleBtn = document.getElementById('mobileToolbarToggle');
+      const controls = document.getElementById('draggableControls');
+      if (!toggleBtn || !controls) return;
+
+      const isMobile = () => window.matchMedia('(max-width: 640px)').matches;
+
+      const setCollapsed = (collapsed) => {
+        controls.classList.toggle('is-collapsed', collapsed);
+        toggleBtn.textContent = collapsed ? '🛠️ 展开工具栏' : '🛠️ 收起工具栏';
+        toggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      };
+
+      if (isMobile()) {
+        setCollapsed(true);
+      } else {
+        setCollapsed(false);
+      }
+
+      toggleBtn.onclick = () => {
+        const nextCollapsed = !controls.classList.contains('is-collapsed');
+        setCollapsed(nextCollapsed);
+      };
+
+      window.addEventListener('resize', () => {
+        if (!isMobile()) {
+          setCollapsed(false);
+        }
+      });
+    }
+
     return {
       init: function () {
+        setupMobileToolbarToggle();
         bindEvents();
         addDraggableElement('circle', { id: 'sealCircle', text1: 'XXX中心医院', text2: '处方专用章', grunge: 60, rotate: -2, x: 590, y: 350 });
         addDraggableElement('sign', { id: 'dragSign', text1: '王医生', color: '#1a2233', rotate: -5, skew: -25, size: 50, font: "'Liu Jian Mao Cao', cursive", spacing: -8, x: 600, y: 450 });

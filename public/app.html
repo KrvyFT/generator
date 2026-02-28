@@ -188,6 +188,82 @@
             border: 0;
             background: #fff;
         }
+
+        @media (max-width: 900px) {
+            .wrap {
+                margin: 12px auto;
+                padding: 0 10px;
+            }
+
+            .card {
+                padding: 14px;
+                border-radius: 12px;
+            }
+
+            .toolbar {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 8px;
+            }
+
+            iframe {
+                height: 68vh;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .auth-wrap {
+                max-width: 100%;
+                margin: 16px auto;
+            }
+
+            .auth-title {
+                font-size: 20px;
+            }
+
+            .auth-subtitle,
+            .hint,
+            label {
+                font-size: 12px;
+            }
+
+            input,
+            button {
+                min-height: 40px;
+                padding: 10px 9px;
+            }
+
+            .toolbar {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .auth-actions {
+                flex-wrap: wrap;
+            }
+
+            .switch-link {
+                width: 100%;
+                text-align: left;
+            }
+
+            iframe {
+                height: 62vh;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .card {
+                padding: 12px;
+            }
+
+            .toolbar {
+                grid-template-columns: 1fr;
+            }
+
+            h2 {
+                font-size: 18px;
+                margin-bottom: 8px;
+            }
+        }
     </style>
 </head>
 
@@ -255,6 +331,7 @@
         const presentationFrame = document.getElementById("presentationFrame");
         const loginPanel = document.getElementById("loginPanel");
         const registerPanel = document.getElementById("registerPanel");
+        let defaultNumberingApplied = false;
 
         function token() { return localStorage.getItem(TOKEN_KEY) || ""; }
         function setToken(v) { localStorage.setItem(TOKEN_KEY, v); }
@@ -283,10 +360,35 @@
             });
         }
 
+        async function applyRandomNumbering(showStatus = true) {
+            const b = await waitBridge();
+            const resp = await callApi("/api/prescription/random", "GET");
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || !data.success) {
+                throw new Error(data.message || `HTTP ${resp.status}`);
+            }
+            if (b.applyRandomData) {
+                b.applyRandomData(data);
+            }
+            if (showStatus) {
+                workResult.textContent = "随机完成";
+            }
+        }
+
+        async function ensureDefaultNumbering() {
+            if (defaultNumberingApplied) return;
+            try {
+                await applyRandomNumbering(false);
+                defaultNumberingApplied = true;
+            } catch {
+            }
+        }
+
         function enterWorkspace(username) {
             authCard.classList.add("hidden");
             workspaceCard.classList.remove("hidden");
             userHint.textContent = `当前用户：${username}`;
+            ensureDefaultNumbering();
         }
 
         function backToAuth() {
@@ -387,17 +489,8 @@
         document.getElementById("randBtn").onclick = async () => {
             workResult.textContent = "随机中...";
             try {
-                const b = await waitBridge();
-                const resp = await callApi("/api/prescription/random", "GET");
-                const data = await resp.json().catch(() => ({}));
-                if (!resp.ok || !data.success) {
-                    throw new Error(data.message || `HTTP ${resp.status}`);
-                }
-
-                if (b.applyRandomData) {
-                    b.applyRandomData(data);
-                }
-                workResult.textContent = "随机完成";
+                await applyRandomNumbering(true);
+                defaultNumberingApplied = true;
             } catch (err) {
                 workResult.textContent = `失败：${err.message || err}`;
             }
@@ -477,6 +570,7 @@
 
         document.getElementById("logoutBtn").onclick = () => {
             clearAuth();
+            defaultNumberingApplied = false;
             backToAuth();
             workResult.textContent = "已退出";
         };

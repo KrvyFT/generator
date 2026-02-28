@@ -175,6 +175,13 @@
             margin: 10px 0 12px;
         }
 
+        .toolbar-toggle {
+            display: none;
+            margin-top: 10px;
+            background: #d8c3c5;
+            color: var(--theme-text);
+        }
+
         .iframe-shell {
             border-radius: 10px;
             overflow: hidden;
@@ -234,6 +241,14 @@
 
             .toolbar {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .toolbar-toggle {
+                display: block;
+            }
+
+            .toolbar.is-collapsed {
+                display: none;
             }
 
             .auth-actions {
@@ -304,6 +319,7 @@
         <div id="workspaceCard" class="card hidden">
             <h2>生成器</h2>
             <div class="hint" id="userHint"></div>
+            <button id="toolbarToggleBtn" class="toolbar-toggle" type="button" aria-expanded="false">展开功能按钮</button>
             <div class="toolbar">
                 <button id="aiBtn" class="btn2">AI 生成处方</button>
                 <button id="randBtn" class="btn2">随机编号</button>
@@ -331,6 +347,8 @@
         const presentationFrame = document.getElementById("presentationFrame");
         const loginPanel = document.getElementById("loginPanel");
         const registerPanel = document.getElementById("registerPanel");
+        const toolbar = document.querySelector("#workspaceCard .toolbar");
+        const toolbarToggleBtn = document.getElementById("toolbarToggleBtn");
         let defaultNumberingApplied = false;
 
         function token() { return localStorage.getItem(TOKEN_KEY) || ""; }
@@ -406,6 +424,44 @@
         function showRegisterPanel() {
             loginPanel.classList.add("hidden");
             registerPanel.classList.remove("hidden");
+        }
+
+        function updateToolbarToggleText(isCollapsed) {
+            if (!toolbarToggleBtn) return;
+            toolbarToggleBtn.textContent = isCollapsed ? "展开功能按钮" : "收起功能按钮";
+            toolbarToggleBtn.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
+        }
+
+        function setToolbarCollapsed(collapsed) {
+            if (!toolbar) return;
+            toolbar.classList.toggle("is-collapsed", collapsed);
+            updateToolbarToggleText(collapsed);
+        }
+
+        function setupMobileToolbarToggle() {
+            if (!toolbar || !toolbarToggleBtn) return;
+            const media = window.matchMedia("(max-width: 640px)");
+
+            const syncByViewport = () => {
+                if (media.matches) {
+                    setToolbarCollapsed(true);
+                } else {
+                    setToolbarCollapsed(false);
+                }
+            };
+
+            toolbarToggleBtn.onclick = () => {
+                const isCollapsed = toolbar.classList.contains("is-collapsed");
+                setToolbarCollapsed(!isCollapsed);
+            };
+
+            if (typeof media.addEventListener === "function") {
+                media.addEventListener("change", syncByViewport);
+            } else if (typeof media.addListener === "function") {
+                media.addListener(syncByViewport);
+            }
+
+            syncByViewport();
         }
 
         document.getElementById("toRegisterBtn").onclick = () => {
@@ -574,6 +630,8 @@
             backToAuth();
             workResult.textContent = "已退出";
         };
+
+        setupMobileToolbarToggle();
 
         (async () => {
             if (!token()) return;

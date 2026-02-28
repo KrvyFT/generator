@@ -419,20 +419,6 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
     filter: blur(0.4px);
   }
 
-  #pgFinalRoot .mobile-toolbar-toggle {
-    display: none;
-    width: 100%;
-    border: 1px solid var(--pg-panel-border);
-    background: var(--pg-theme-main);
-    color: #3f2f30;
-    border-radius: 10px;
-    padding: 10px 12px;
-    margin-top: 8px;
-    margin-bottom: 6px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-
   @media (max-width: 1220px) {
     #pgFinalRoot .pg-layout {
       grid-template-columns: 1fr;
@@ -574,13 +560,6 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
       margin-top: 6px;
     }
 
-    #pgFinalRoot .mobile-toolbar-toggle {
-      display: block;
-    }
-
-    #pgFinalRoot .controls.is-collapsed {
-      display: none;
-    }
   }
 </style>
 
@@ -760,8 +739,6 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
         </div>
       </div>
 
-      <button id="mobileToolbarToggle" class="mobile-toolbar-toggle" type="button" aria-expanded="false">🛠️
-        展开工具栏</button>
       <div class="controls" id="draggableControls">
         <h3 class="controls-header"><span style="margin-right: 6px;">🛠️</span> 控制面板</h3>
         <div class="control-group"><button class="btn btn-black" id="modeToggleBtn" onclick="App.toggleMode()"
@@ -1408,40 +1385,8 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
       return canvas.toDataURL('image/jpeg', 0.92);
     }
 
-    function setupMobileToolbarToggle() {
-      const toggleBtn = document.getElementById('mobileToolbarToggle');
-      const controls = document.getElementById('draggableControls');
-      if (!toggleBtn || !controls) return;
-
-      const isMobile = () => window.matchMedia('(max-width: 640px)').matches;
-
-      const setCollapsed = (collapsed) => {
-        controls.classList.toggle('is-collapsed', collapsed);
-        toggleBtn.textContent = collapsed ? '🛠️ 展开工具栏' : '🛠️ 收起工具栏';
-        toggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-      };
-
-      if (isMobile()) {
-        setCollapsed(true);
-      } else {
-        setCollapsed(false);
-      }
-
-      toggleBtn.onclick = () => {
-        const nextCollapsed = !controls.classList.contains('is-collapsed');
-        setCollapsed(nextCollapsed);
-      };
-
-      window.addEventListener('resize', () => {
-        if (!isMobile()) {
-          setCollapsed(false);
-        }
-      });
-    }
-
     return {
       init: function () {
-        setupMobileToolbarToggle();
         bindEvents();
         addDraggableElement('circle', { id: 'sealCircle', text1: 'XXX中心医院', text2: '处方专用章', grunge: 60, rotate: -2, x: 590, y: 350 });
         addDraggableElement('sign', { id: 'dragSign', text1: '王医生', color: '#1a2233', rotate: -5, skew: -25, size: 50, font: "'Liu Jian Mao Cao', cursive", spacing: -8, x: 600, y: 450 });

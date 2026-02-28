@@ -68,14 +68,3 @@
 
 - `public/app.html`
 - `public/presentation.html`
-
-## 7) 构建与部署注意事项
-
-当前 `wrangler.toml` 已移除云端自定义 Rust 构建命令，部署会直接使用仓库中的 `build/` 产物。
-
-因此在本地修改 Rust 代码后，请先本地重新构建并提交 `build/` 目录，再执行部署。
-
-推荐使用脚本：
-
-- 本地构建：`npm run build:worker`
-- 构建并部署：`npm run deploy`

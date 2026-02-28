@@ -378,6 +378,17 @@ pub async fn generate_pdf(mut req: Request, env: &Env, cors_origin: &str) -> Res
         Err(resp) => return Ok(resp),
     };
 
+    if let Err(msg) = apply_rate_limit(&req, env, "pdf_generate").await {
+        return json_with_status(
+            429,
+            &ApiResponse {
+                success: false,
+                message: msg,
+            },
+            cors_origin,
+        );
+    }
+
     let payload = match req.json::<PdfGenerateRequest>().await {
         Ok(v) => v,
         Err(_) => {
@@ -399,8 +410,29 @@ pub async fn generate_pdf(mut req: Request, env: &Env, cors_origin: &str) -> Res
         .to_string();
 
     if let Some(image_data_url) = payload.image_data_url {
+        if image_data_url.len() > 12_000_000 {
+            return json_with_status(
+                413,
+                &ApiResponse {
+                    success: false,
+                    message: "图片数据过大，请压缩后重试".to_string(),
+                },
+                cors_origin,
+            );
+        }
+
         let jpeg_bytes = decode_data_url_jpeg(&image_data_url)
             .ok_or_else(|| Error::RustError("图片数据无效，仅支持 JPEG data URL".to_string()))?;
+        if jpeg_bytes.len() > 8 * 1024 * 1024 {
+            return json_with_status(
+                413,
+                &ApiResponse {
+                    success: false,
+                    message: "图片体积过大，请压缩到 8MB 以内".to_string(),
+                },
+                cors_origin,
+            );
+        }
         let (w, h) = jpeg_dimensions(&jpeg_bytes)
             .ok_or_else(|| Error::RustError("无法识别 JPEG 图片尺寸".to_string()))?;
 
@@ -471,6 +503,23 @@ pub async fn generate_prescription(
     env: &Env,
     cors_origin: &str,
 ) -> Result<HttpResponse> {
+    let _session = match require_auth(&req, env).await {
+        Ok(s) => s,
+        Err(resp) => return Ok(resp),
+    };
+
+    if let Err(msg) = apply_rate_limit(&req, env, "ai_generate").await {
+        return json_with_status(
+            429,
+            &GeneratePrescriptionResponse {
+                success: false,
+                result: None,
+                message: Some(msg),
+            },
+            cors_origin,
+        );
+    }
+
     let payload = match req.json::<GeneratePrescriptionRequest>().await {
         Ok(v) => v,
         Err(_) => {
@@ -494,6 +543,18 @@ pub async fn generate_prescription(
                 success: false,
                 result: None,
                 message: Some("请先输入临床诊断".to_string()),
+            },
+            cors_origin,
+        );
+    }
+
+    if diag_text.len() > 3000 {
+        return json_with_status(
+            400,
+            &GeneratePrescriptionResponse {
+                success: false,
+                result: None,
+                message: Some("诊断文本过长，请控制在 3000 字以内".to_string()),
             },
             cors_origin,
         );

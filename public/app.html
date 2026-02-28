@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>处方工作台</title>
+    <title>工作台</title>
     <style>
         :root {
             --theme-main: #d6bebf;
@@ -527,7 +527,7 @@
                     throw new Error("请先输入临床诊断");
                 }
 
-                const resp = await callApi("/api/prescription/generate", "POST", { diag_text: diagText });
+                const resp = await callApi("/api/prescription/generate", "POST", { diag_text: diagText }, true);
                 const data = await resp.json().catch(() => ({}));
                 if (!resp.ok || !data.success || !data.result) {
                     throw new Error(data.message || `HTTP ${resp.status}`);
@@ -598,7 +598,7 @@
                 const pageMode = state && state.mode ? state.mode : "prescription";
 
                 const resp = await callApi("/api/pdf/generate", "POST", {
-                    title: "处方导出",
+                    title: "导出",
                     image_data_url: imageDataUrl,
                     page_mode: pageMode,
                     note: "由系统后端生成图片版 PDF"

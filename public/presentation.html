@@ -107,6 +107,34 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
     overflow: hidden;
   }
 
+  #pgFinalRoot .screen-watermark {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 95;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: center;
+    justify-content: center;
+    gap: 28px 56px;
+    padding: 18px;
+    transform: rotate(-24deg) scale(1.15);
+    transform-origin: center;
+    user-select: none;
+  }
+
+  #pgFinalRoot .screen-watermark.is-hidden {
+    display: none;
+  }
+
+  #pgFinalRoot .screen-watermark>span {
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: rgba(26, 34, 51, 0.1);
+    white-space: nowrap;
+    font-family: "SimSun", "Songti SC", serif;
+  }
+
   #pgFinalRoot .controls {
     position: relative;
     top: 0;
@@ -561,6 +589,12 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
     }
 
   }
+
+  @media print {
+    #pgFinalRoot .screen-watermark {
+      display: none !important;
+    }
+  }
 </style>
 
 <div id="pgFinalRoot">
@@ -733,6 +767,11 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
               </div>
 
               <div id="dynamicElementsContainer"></div>
+              <div id="screenWatermark" class="screen-watermark" aria-hidden="true">
+                <span>仅限内部阅览</span><span>禁止截图传播</span><span>仅限内部阅览</span><span>禁止截图传播</span>
+                <span>仅限内部阅览</span><span>禁止截图传播</span><span>仅限内部阅览</span><span>禁止截图传播</span>
+                <span>仅限内部阅览</span><span>禁止截图传播</span><span>仅限内部阅览</span><span>禁止截图传播</span>
+              </div>
             </div>
           </div>
         </div>
@@ -828,8 +867,14 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
       canvas: document.getElementById('canvasWrapper'),
       stage: document.getElementById('paperStage'),
       paper: document.getElementById('paperArea'),
-      container: document.getElementById('dynamicElementsContainer')
+      container: document.getElementById('dynamicElementsContainer'),
+      watermark: document.getElementById('screenWatermark')
     };
+
+    function setScreenWatermarkVisible(visible) {
+      if (!DOM.watermark) return;
+      DOM.watermark.classList.toggle('is-hidden', !visible);
+    }
 
     function toggleDifang() {
       currentDifangIdx = (currentDifangIdx + 1) % difangTypes.length;
@@ -846,35 +891,81 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
       return elements + '</g>';
     }
 
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>'"]/g, ch => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[ch]));
+    }
+
+    function clampNumber(value, min, max, fallback) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return fallback;
+      return Math.min(max, Math.max(min, n));
+    }
+
+    function sanitizeId(value, fallback) {
+      const s = String(value || '').replace(/[^a-zA-Z0-9_-]/g, '');
+      return s || fallback;
+    }
+
+    function sanitizeColor(value, fallback) {
+      const s = String(value || '').trim();
+      if (/^#[0-9a-fA-F]{6}$/.test(s)) return s;
+      return fallback;
+    }
+
+    function normalizeSignFont(font) {
+      const allowlist = [
+        "'Liu Jian Mao Cao', cursive",
+        "'Zhi Mang Xing', cursive",
+        "'KaiTi','STKaiti','Kaiti SC',serif",
+        "'FangSong','STFangsong','Songti SC',serif",
+        "'SimSun','Songti SC',serif"
+      ];
+      return allowlist.includes(font) ? font : allowlist[0];
+    }
+
     function buildCircleSealSVG(id, text1, text2, grunge) {
       const sealFont = "'宋体','SimSun','Songti SC','STSong',serif";
+      const safeId = sanitizeId(id, 'seal');
+      const safeText1 = escapeHtml(text1);
+      const safeText2 = escapeHtml(text2);
+      const safeGrunge = clampNumber(grunge, 0, 100, 30);
       return `
       <svg class="seal-svg" viewBox="0 0 170 170" style="overflow:visible;">
         <defs>
-          <path id="path_${id}" d="M 35,112 A 56,56 0 1,1 135,112" />
-          <mask id="mask_${id}"><rect width="100%" height="100%" fill="white" /><g opacity="${grunge / 100}">${generateNoiseElements(170, 170)}</g></mask>
+          <path id="path_${safeId}" d="M 35,112 A 56,56 0 1,1 135,112" />
+          <mask id="mask_${safeId}"><rect width="100%" height="100%" fill="white" /><g opacity="${safeGrunge / 100}">${generateNoiseElements(170, 170)}</g></mask>
         </defs>
-        <g mask="url(#mask_${id})" fill="currentColor" stroke="currentColor">
+        <g mask="url(#mask_${safeId})" fill="currentColor" stroke="currentColor">
           <circle cx="85" cy="85" r="78" fill="none" stroke-width="5" />
           <polygon points="85,60 90.6,77.3 108.8,77.3 94.1,88 99.7,105.3 85,94.6 70.3,105.3 75.9,88 61.2,77.3 79.4,77.3" stroke="none" />
           <text font-family="${sealFont}" font-weight="bold" font-size="24" letter-spacing="1" text-anchor="middle" stroke="none">
-            <textPath xlink:href="#path_${id}" startOffset="50%">${text1}</textPath>
+            <textPath xlink:href="#path_${safeId}" startOffset="50%">${safeText1}</textPath>
           </text>
-          <text font-family="${sealFont}" font-weight="bold" x="85" y="130" font-size="20" letter-spacing="2" text-anchor="middle" stroke="none">${text2}</text>
+          <text font-family="${sealFont}" font-weight="bold" x="85" y="130" font-size="20" letter-spacing="2" text-anchor="middle" stroke="none">${safeText2}</text>
         </g>
       </svg>`;
     }
 
     function buildRectSealSVG(id, text1, text2, grunge) {
       const sealFont = "'宋体','SimSun','Songti SC','STSong',serif";
-      const texts = text2
-        ? `<text x="45" y="17" text-anchor="middle" font-size="16" letter-spacing="1" font-family="${sealFont}" font-weight="bold" stroke="none">${text1}</text>
-           <text x="45" y="33" text-anchor="middle" font-size="12" letter-spacing="0" font-family="${sealFont}" font-weight="bold" stroke="none">${text2}</text>`
-        : `<text x="45" y="26" text-anchor="middle" font-size="20" letter-spacing="1" font-family="${sealFont}" font-weight="bold" stroke="none">${text1}</text>`;
+      const safeId = sanitizeId(id, 'seal_rect');
+      const safeText1 = escapeHtml(text1);
+      const safeText2 = escapeHtml(text2);
+      const safeGrunge = clampNumber(grunge, 0, 100, 30);
+      const texts = safeText2
+        ? `<text x="45" y="17" text-anchor="middle" font-size="16" letter-spacing="1" font-family="${sealFont}" font-weight="bold" stroke="none">${safeText1}</text>
+           <text x="45" y="33" text-anchor="middle" font-size="12" letter-spacing="0" font-family="${sealFont}" font-weight="bold" stroke="none">${safeText2}</text>`
+        : `<text x="45" y="26" text-anchor="middle" font-size="20" letter-spacing="1" font-family="${sealFont}" font-weight="bold" stroke="none">${safeText1}</text>`;
       return `
       <svg class="seal-svg" viewBox="0 0 90 40" style="overflow:visible;">
-        <defs><mask id="mask_${id}"><rect width="100%" height="100%" fill="white" /><g opacity="${grunge / 100}">${generateNoiseElements(90, 40)}</g></mask></defs>
-        <g mask="url(#mask_${id})" fill="currentColor" stroke="currentColor">
+        <defs><mask id="mask_${safeId}"><rect width="100%" height="100%" fill="white" /><g opacity="${safeGrunge / 100}">${generateNoiseElements(90, 40)}</g></mask></defs>
+        <g mask="url(#mask_${safeId})" fill="currentColor" stroke="currentColor">
           <rect x="2" y="2" width="86" height="36" fill="none" stroke-width="2.5" />
           ${texts}
         </g>
@@ -882,12 +973,17 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
     }
 
     function buildSignatureHTML(data) {
-      return `<div class="doctor-signature" style="font-family:${data.font};font-size:${data.size}px;letter-spacing:${data.spacing}px;transform:skewX(${data.skew}deg);filter:${data.font.includes('Liu Jian Mao Cao') && data.skew < -10 ? 'blur(0.4px)' : 'none'};">${data.text1}</div>`;
+      const font = normalizeSignFont(data.font);
+      const size = clampNumber(data.size, 20, 120, 50);
+      const spacing = clampNumber(data.spacing, -30, 10, -8);
+      const skew = clampNumber(data.skew, -50, 20, -25);
+      const text = escapeHtml(data.text1);
+      return `<div class="doctor-signature" style="font-family:${font};font-size:${size}px;letter-spacing:${spacing}px;transform:skewX(${skew}deg);filter:${font.includes('Liu Jian Mao Cao') && skew < -10 ? 'blur(0.4px)' : 'none'};">${text}</div>`;
     }
 
     function addDraggableElement(type, data) {
       state.elementCount++;
-      const id = data.id || `el_${state.elementCount}`;
+      const id = sanitizeId(data.id || `el_${state.elementCount}`, `el_${state.elementCount}`);
       const wrapper = document.createElement('div');
       wrapper.className = 'draggable-item';
       if (type === 'sign') wrapper.classList.add('draggable-sign-container');
@@ -895,41 +991,111 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
 
       const paperWidth = state.mode === 'diagnosis' ? 794 : 800;
       const paperHeight = state.mode === 'diagnosis' ? 1123 : 560;
-      const posX = data.x !== undefined ? data.x : (paperWidth / 2 - 50 + (Math.random() * 100 - 50));
-      const posY = data.y !== undefined ? data.y : (paperHeight / 2 - 50 + (Math.random() * 100 - 50));
+      const posX = data.x !== undefined ? clampNumber(data.x, -2000, 4000, 0) : (paperWidth / 2 - 50 + (Math.random() * 100 - 50));
+      const posY = data.y !== undefined ? clampNumber(data.y, -2000, 4000, 0) : (paperHeight / 2 - 50 + (Math.random() * 100 - 50));
+      const rotate = clampNumber(data.rotate, -180, 180, 0);
+      const color = sanitizeColor(data.color, type === 'sign' ? '#1a2233' : '#d90000');
+      const grunge = clampNumber(data.grunge, 0, 100, 30);
 
       wrapper.setAttribute('data-type', type);
-      wrapper.setAttribute('data-color', data.color || '#d90000');
-      wrapper.setAttribute('data-grunge', data.grunge || 30);
-      state.elements[id] = { x: posX, y: posY, r: data.rotate || 0 };
-      wrapper.style.transform = `translate(${posX}px, ${posY}px) rotate(${data.rotate || 0}deg)`;
-      wrapper.style.color = data.color || '#d90000';
+      wrapper.setAttribute('data-color', color);
+      wrapper.setAttribute('data-grunge', String(grunge));
+      state.elements[id] = { x: posX, y: posY, r: rotate };
+      wrapper.style.transform = `translate(${posX}px, ${posY}px) rotate(${rotate}deg)`;
+      wrapper.style.color = color;
 
       if (type === 'circle') {
-        wrapper.setAttribute('data-text1', data.text1 || 'XX市中心医院');
-        wrapper.setAttribute('data-text2', data.text2 || '处方专用章');
-        wrapper.innerHTML = buildCircleSealSVG(id, data.text1, data.text2, data.grunge || 30);
+        const text1 = String(data.text1 || 'XX市中心医院');
+        const text2 = String(data.text2 || '处方专用章');
+        wrapper.setAttribute('data-text1', text1);
+        wrapper.setAttribute('data-text2', text2);
+        wrapper.innerHTML = buildCircleSealSVG(id, text1, text2, grunge);
         wrapper.style.width = '170px';
         wrapper.style.height = '170px';
       } else if (type === 'rect') {
-        wrapper.setAttribute('data-text1', data.text1 || '已发药');
-        wrapper.setAttribute('data-text2', data.text2 || '');
-        wrapper.innerHTML = buildRectSealSVG(id, data.text1, data.text2, data.grunge || 30);
+        const text1 = String(data.text1 || '已发药');
+        const text2 = String(data.text2 || '');
+        wrapper.setAttribute('data-text1', text1);
+        wrapper.setAttribute('data-text2', text2);
+        wrapper.innerHTML = buildRectSealSVG(id, text1, text2, grunge);
         wrapper.style.width = '90px';
         wrapper.style.height = '40px';
       } else if (type === 'sign') {
-        wrapper.setAttribute('data-text1', data.text1 || 'XXX');
-        wrapper.setAttribute('data-font', data.font || "'Liu Jian Mao Cao', cursive");
-        wrapper.setAttribute('data-size', data.size || 50);
-        wrapper.setAttribute('data-spacing', data.spacing || -8);
-        wrapper.setAttribute('data-skew', data.skew || -25);
-        wrapper.style.color = data.color || '#1a2233';
-        wrapper.innerHTML = buildSignatureHTML(data);
+        const text1 = String(data.text1 || 'XXX');
+        const font = normalizeSignFont(data.font || "'Liu Jian Mao Cao', cursive");
+        const size = clampNumber(data.size, 20, 120, 50);
+        const spacing = clampNumber(data.spacing, -30, 10, -8);
+        const skew = clampNumber(data.skew, -50, 20, -25);
+        wrapper.setAttribute('data-text1', text1);
+        wrapper.setAttribute('data-font', font);
+        wrapper.setAttribute('data-size', String(size));
+        wrapper.setAttribute('data-spacing', String(spacing));
+        wrapper.setAttribute('data-skew', String(skew));
+        wrapper.style.color = color;
+        wrapper.innerHTML = buildSignatureHTML({ text1, font, size, spacing, skew });
       }
 
       DOM.container.appendChild(wrapper);
       selectElement(wrapper);
       return wrapper;
+    }
+
+    function extractElementItems() {
+      if (!DOM.container) return [];
+      const items = [];
+      DOM.container.querySelectorAll('.draggable-item').forEach(el => {
+        const id = sanitizeId(el.id, `el_${items.length + 1}`);
+        const type = el.getAttribute('data-type');
+        const pos = state.elements[id] || {};
+        if (!['circle', 'rect', 'sign'].includes(type)) return;
+        items.push({
+          id,
+          type,
+          x: clampNumber(pos.x, -2000, 4000, 0),
+          y: clampNumber(pos.y, -2000, 4000, 0),
+          rotate: clampNumber(pos.r, -180, 180, 0),
+          color: sanitizeColor(el.getAttribute('data-color'), type === 'sign' ? '#1a2233' : '#d90000'),
+          grunge: clampNumber(el.getAttribute('data-grunge'), 0, 100, 30),
+          text1: String(el.getAttribute('data-text1') || ''),
+          text2: String(el.getAttribute('data-text2') || ''),
+          font: normalizeSignFont(el.getAttribute('data-font') || "'Liu Jian Mao Cao', cursive"),
+          size: clampNumber(el.getAttribute('data-size'), 20, 120, 50),
+          spacing: clampNumber(el.getAttribute('data-spacing'), -30, 10, -8),
+          skew: clampNumber(el.getAttribute('data-skew'), -50, 20, -25)
+        });
+      });
+      return items;
+    }
+
+    function buildItemsFromLegacyPayload(payload) {
+      const html = String(payload && payload.containerHtml ? payload.containerHtml : '');
+      if (!html) return [];
+      const template = document.createElement('template');
+      template.innerHTML = html;
+      const elementsMap = payload && payload.elements && typeof payload.elements === 'object' ? payload.elements : {};
+      const items = [];
+      template.content.querySelectorAll('.draggable-item').forEach((el, idx) => {
+        const id = sanitizeId(el.id, `legacy_${idx + 1}`);
+        const type = el.getAttribute('data-type');
+        if (!['circle', 'rect', 'sign'].includes(type)) return;
+        const pos = elementsMap[id] || {};
+        items.push({
+          id,
+          type,
+          x: clampNumber(pos.x, -2000, 4000, 0),
+          y: clampNumber(pos.y, -2000, 4000, 0),
+          rotate: clampNumber(pos.r, -180, 180, 0),
+          color: sanitizeColor(el.getAttribute('data-color'), type === 'sign' ? '#1a2233' : '#d90000'),
+          grunge: clampNumber(el.getAttribute('data-grunge'), 0, 100, 30),
+          text1: String(el.getAttribute('data-text1') || ''),
+          text2: String(el.getAttribute('data-text2') || ''),
+          font: normalizeSignFont(el.getAttribute('data-font') || "'Liu Jian Mao Cao', cursive"),
+          size: clampNumber(el.getAttribute('data-size'), 20, 120, 50),
+          spacing: clampNumber(el.getAttribute('data-spacing'), -30, 10, -8),
+          skew: clampNumber(el.getAttribute('data-skew'), -50, 20, -25)
+        });
+      });
+      return items;
     }
 
     function updateElementTransform(elId) {
@@ -1316,7 +1482,7 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
         currentDifangIdx,
         formValues,
         editableValues,
-        containerHtml: DOM.container ? DOM.container.innerHTML : '',
+        items: extractElementItems(),
         elements: JSON.parse(JSON.stringify(state.elements || {}))
       };
     }
@@ -1349,9 +1515,14 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
       });
 
       if (DOM.container) {
-        DOM.container.innerHTML = payload.containerHtml || '';
+        DOM.container.textContent = '';
       }
-      state.elements = payload.elements || {};
+      state.elements = {};
+      const items = Array.isArray(payload.items) ? payload.items : buildItemsFromLegacyPayload(payload);
+      items.forEach(item => {
+        if (!item || typeof item !== 'object') return;
+        addDraggableElement(item.type, item);
+      });
       state.activeId = null;
       selectElement(null);
       resizeTextareas();
@@ -1376,12 +1547,18 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
       await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
       const target = document.getElementById('paperArea');
       if (!target) throw new Error('找不到纸张区域');
-      const canvas = await window.html2canvas(target, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff'
-      });
-      return canvas.toDataURL('image/jpeg', 0.92);
+
+      setScreenWatermarkVisible(false);
+      try {
+        const canvas = await window.html2canvas(target, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff'
+        });
+        return canvas.toDataURL('image/jpeg', 0.92);
+      } finally {
+        setScreenWatermarkVisible(true);
+      }
     }
 
     return {

@@ -11,15 +11,86 @@ use worker::*;
 use models::ApiResponse;
 use response::{empty_with_status, html_with_status, json_with_status};
 
+fn infer_request_origin(req: &Request) -> Option<String> {
+    let host = req
+        .headers()
+        .get("Host")
+        .ok()
+        .flatten()
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty())?;
+
+    let proto = req
+        .headers()
+        .get("X-Forwarded-Proto")
+        .ok()
+        .flatten()
+        .map(|v| v.trim().to_lowercase())
+        .filter(|v| v == "http" || v == "https")
+        .unwrap_or_else(|| "https".to_string());
+
+    Some(format!("{}://{}", proto, host))
+}
+
+fn resolve_cors_origin(req: &Request, env: &Env) -> (String, bool) {
+    let request_origin = req
+        .headers()
+        .get("Origin")
+        .ok()
+        .flatten()
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty());
+
+    let configured = env
+        .var("CORS_ORIGIN")
+        .ok()
+        .map(|v| v.to_string())
+        .unwrap_or_default();
+
+    let allowlist: Vec<String> = configured
+        .split(',')
+        .map(str::trim)
+        .filter(|v| !v.is_empty() && *v != "*")
+        .map(|v| v.to_string())
+        .collect();
+
+    if !allowlist.is_empty() {
+        if let Some(origin) = request_origin {
+            if allowlist.iter().any(|v| v == &origin) {
+                return (origin, true);
+            }
+            return (allowlist[0].clone(), false);
+        }
+        return (allowlist[0].clone(), true);
+    }
+
+    let fallback_origin =
+        infer_request_origin(req).unwrap_or_else(|| "https://localhost".to_string());
+    if let Some(origin) = request_origin {
+        let allowed = origin == fallback_origin;
+        return (fallback_origin, allowed);
+    }
+
+    (fallback_origin, true)
+}
+
 #[event(fetch)]
 async fn fetch(req: HttpRequest, env: Env, _ctx: Context) -> Result<HttpResponse> {
     let req = Request::try_from(req)?;
     let path = req.path();
     let method = req.method();
-    let cors_origin = env
-        .var("CORS_ORIGIN")
-        .map(|v| v.to_string())
-        .unwrap_or_else(|_| "*".to_string());
+    let (cors_origin, origin_allowed) = resolve_cors_origin(&req, &env);
+
+    if path.starts_with("/api/") && !origin_allowed {
+        return json_with_status(
+            403,
+            &ApiResponse {
+                success: false,
+                message: "Origin not allowed".to_string(),
+            },
+            &cors_origin,
+        );
+    }
 
     if method == Method::Options && path.starts_with("/api/") {
         return empty_with_status(204, &cors_origin);

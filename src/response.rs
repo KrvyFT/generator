@@ -31,5 +31,16 @@ pub fn with_cors_headers(response: &mut Response, cors_origin: &str) -> Result<(
         "Content-Type, Authorization",
     )?;
     headers.set("Vary", "Origin")?;
+    headers.set("X-Content-Type-Options", "nosniff")?;
+    headers.set("Referrer-Policy", "no-referrer")?;
+    headers.set("X-Frame-Options", "SAMEORIGIN")?;
+    headers.set(
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains",
+    )?;
+    headers.set(
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; upgrade-insecure-requests",
+    )?;
     Ok(())
 }

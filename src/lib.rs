@@ -26,12 +26,12 @@ async fn fetch(req: HttpRequest, env: Env, _ctx: Context) -> Result<HttpResponse
     }
 
     if method == Method::Get && path == "/" {
-        let html = include_str!("../app.html");
+        let html = include_str!("../public/app.html");
         return html_with_status(200, html, &cors_origin);
     }
 
     if method == Method::Get && path == "/presentation" {
-        let html = include_str!("../presentation.html");
+        let html = include_str!("../public/presentation.html");
         return html_with_status(200, html, &cors_origin);
     }
 
@@ -45,7 +45,9 @@ async fn fetch(req: HttpRequest, env: Env, _ctx: Context) -> Result<HttpResponse
         (Method::Get, "/api/workspace/latest") => {
             handlers::latest_workspace(req, &env, &cors_origin).await
         }
-        (Method::Post, "/api/pdf/generate") => handlers::generate_pdf(req, &env, &cors_origin).await,
+        (Method::Post, "/api/pdf/generate") => {
+            handlers::generate_pdf(req, &env, &cors_origin).await
+        }
         (Method::Post, "/api/prescription/generate") => {
             handlers::generate_prescription(req, &env, &cors_origin).await
         }

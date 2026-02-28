@@ -57,11 +57,14 @@
 }
 ```
 
-独立前端页面示例见 `register.html`。如前端部署在其他域名，确保 `CORS_ORIGIN` 正确设置。
-
 新增一体化页面 `app.html`，流程为：
 
 - 注册或登录
 - 进入功能界面并交互编辑
 - 保存/加载工作区
 - 后端生成并下载 PDF
+
+前端页面文件已统一放在 `public/` 目录：
+
+- `public/app.html`
+- `public/presentation.html`

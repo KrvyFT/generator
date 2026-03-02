@@ -1450,7 +1450,7 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
         DOM.canvas.addEventListener('mousedown', (e) => {
           if (e.button !== 0) return;
           if (e.target.closest('.draggable-item')) return;
-          if (e.target.closest('input, textarea, button, select, [contenteditable="true"]')) return;
+          if (e.target.closest('input, textarea, button, select, [contenteditable]')) return;
           canvasPan.isPanning = true;
           canvasPan.startX = e.clientX;
           canvasPan.startY = e.clientY;
@@ -1475,7 +1475,7 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
 
         DOM.canvas.addEventListener('touchstart', (e) => {
           if (e.target.closest('.draggable-item')) return;
-          if (e.target.closest('input, textarea, button, select, [contenteditable="true"]')) return;
+          if (e.target.closest('input, textarea, button, select, [contenteditable]')) return;
           const touch = e.touches && e.touches[0];
           if (!touch) return;
           canvasPan.isPanning = true;

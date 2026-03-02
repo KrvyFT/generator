@@ -100,11 +100,6 @@ pub struct WorkspaceResponse {
 }
 
 #[derive(serde::Deserialize)]
-pub struct PdfGenerateRequest {
-    pub title: Option<String>,
-    pub diagnosis: Option<String>,
-    pub prescription: Option<String>,
-    pub note: Option<String>,
-    pub image_data_url: Option<String>,
-    pub page_mode: Option<String>,
+pub struct PngGenerateRequest {
+    pub image_data_url: String,
 }

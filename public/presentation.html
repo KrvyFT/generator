@@ -707,7 +707,7 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
                   </div>
                 </div>
 
-                <div style="display:flex;justify-content:space-between;font-size:14px;margin-top:4px;padding:0 10px;">
+                <div style="display:flex;justify-content:space-between;font-size:14px;margin-top:4px;padding:0 5px;">
                   <div>审核</div>
                   <div>调配</div>
                   <div>核对</div>
@@ -1648,7 +1648,7 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
           useCORS: true,
           backgroundColor: '#ffffff'
         });
-        return canvas.toDataURL('image/jpeg', 0.92);
+        return canvas.toDataURL('image/png');
       } finally {
         setScreenWatermarkVisible(true);
         if (prevActiveEl) {
@@ -1692,7 +1692,7 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
     };
   })();
 
-  window.addEventListener('DOMContentLoaded', () => {
+  function initPresentationBridge() {
     App.init();
     window.PresentationBridge = {
       exportState: () => App.exportState(),
@@ -1701,5 +1701,11 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
       applyRandomData: (data) => App.applyRandomData(data),
       capturePaperImage: () => App.capturePaperImage()
     };
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', initPresentationBridge, { once: true });
+  } else {
+    initPresentationBridge();
+  }
 </script>

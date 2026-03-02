@@ -116,8 +116,8 @@ async fn fetch(req: HttpRequest, env: Env, _ctx: Context) -> Result<HttpResponse
         (Method::Get, "/api/workspace/latest") => {
             handlers::latest_workspace(req, &env, &cors_origin).await
         }
-        (Method::Post, "/api/pdf/generate") => {
-            handlers::generate_pdf(req, &env, &cors_origin).await
+        (Method::Post, "/api/png/generate") => {
+            handlers::generate_png(req, &env, &cors_origin).await
         }
         (Method::Post, "/api/prescription/generate") => {
             handlers::generate_prescription(req, &env, &cors_origin).await

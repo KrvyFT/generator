@@ -3,8 +3,8 @@ use crate::constants::{D1_BINDING, DEFAULT_SUPPORT_EMAIL, KV_BINDING};
 use crate::models::*;
 use crate::response::{json_with_status, with_cors_headers};
 use crate::utils::{
-    build_image_pdf, build_simple_pdf, decode_data_url_jpeg, generate_session_token, hash_password,
-    jpeg_dimensions, now_iso, rand_digit, rand_range_int, random_date_from_now, split_multiline,
+    decode_data_url_png, generate_session_token, hash_password, now_iso, rand_digit,
+    rand_range_int, random_date_from_now,
 };
 use worker::wasm_bindgen::JsValue;
 use worker::*;
@@ -372,13 +372,13 @@ pub async fn latest_workspace(req: Request, env: &Env, cors_origin: &str) -> Res
     )
 }
 
-pub async fn generate_pdf(mut req: Request, env: &Env, cors_origin: &str) -> Result<HttpResponse> {
+pub async fn generate_png(mut req: Request, env: &Env, cors_origin: &str) -> Result<HttpResponse> {
     let _session = match require_auth(&req, env).await {
         Ok(s) => s,
         Err(resp) => return Ok(resp),
     };
 
-    if let Err(msg) = apply_rate_limit(&req, env, "pdf_generate").await {
+    if let Err(msg) = apply_rate_limit(&req, env, "png_generate").await {
         return json_with_status(
             429,
             &ApiResponse {
@@ -389,109 +389,51 @@ pub async fn generate_pdf(mut req: Request, env: &Env, cors_origin: &str) -> Res
         );
     }
 
-    let payload = match req.json::<PdfGenerateRequest>().await {
+    let payload = match req.json::<PngGenerateRequest>().await {
         Ok(v) => v,
         Err(_) => {
             return json_with_status(
                 400,
                 &ApiResponse {
                     success: false,
-                    message: "请求体必须是 JSON，包含 diagnosis/prescription".to_string(),
+                    message: "请求体必须是 JSON，包含 image_data_url".to_string(),
                 },
                 cors_origin,
             )
         }
     };
 
-    let title = payload
-        .title
-        .unwrap_or_else(|| "处方导出".to_string())
-        .trim()
-        .to_string();
-
-    if let Some(image_data_url) = payload.image_data_url {
-        if image_data_url.len() > 12_000_000 {
-            return json_with_status(
-                413,
-                &ApiResponse {
-                    success: false,
-                    message: "图片数据过大，请压缩后重试".to_string(),
-                },
-                cors_origin,
-            );
-        }
-
-        let jpeg_bytes = decode_data_url_jpeg(&image_data_url)
-            .ok_or_else(|| Error::RustError("图片数据无效，仅支持 JPEG data URL".to_string()))?;
-        if jpeg_bytes.len() > 8 * 1024 * 1024 {
-            return json_with_status(
-                413,
-                &ApiResponse {
-                    success: false,
-                    message: "图片体积过大，请压缩到 8MB 以内".to_string(),
-                },
-                cors_origin,
-            );
-        }
-        let (w, h) = jpeg_dimensions(&jpeg_bytes)
-            .ok_or_else(|| Error::RustError("无法识别 JPEG 图片尺寸".to_string()))?;
-
-        let (page_w, page_h) = match payload.page_mode.as_deref() {
-            Some("diagnosis") => (595.28_f64, 841.89_f64),
-            _ => (595.28_f64, 419.53_f64),
-        };
-
-        let pdf_bytes = build_image_pdf(&jpeg_bytes, w, h, page_w, page_h);
-
-        let mut response = Response::from_bytes(pdf_bytes)?.with_status(200);
-        let headers = response.headers_mut();
-        headers.set("Content-Type", "application/pdf")?;
-        headers.set(
-            "Content-Disposition",
-            "attachment; filename=prescription-export.pdf",
-        )?;
-        with_cors_headers(&mut response, cors_origin)?;
-
-        return HttpResponse::try_from(response);
-    }
-
-    let diagnosis = payload.diagnosis.unwrap_or_default();
-    let prescription = payload.prescription.unwrap_or_default();
-    if diagnosis.trim().is_empty() && prescription.trim().is_empty() {
+    if payload.image_data_url.len() > 16_000_000 {
         return json_with_status(
-            400,
+            413,
             &ApiResponse {
                 success: false,
-                message: "缺少导出内容，请提供图片或处方文本".to_string(),
+                message: "图片数据过大，请压缩后重试".to_string(),
             },
             cors_origin,
         );
     }
 
-    let mut lines = vec![
-        format!("标题: {}", title),
-        format!("导出时间: {}", now_iso()),
-        "".to_string(),
-        "诊断: ".to_string(),
-    ];
-    lines.extend(split_multiline(&diagnosis));
-    lines.push("".to_string());
-    lines.push("处方: ".to_string());
-    lines.extend(split_multiline(&prescription));
-    if let Some(note) = payload.note {
-        lines.push("".to_string());
-        lines.push("备注: ".to_string());
-        lines.extend(split_multiline(&note));
+    let png_bytes = decode_data_url_png(&payload.image_data_url)
+        .ok_or_else(|| Error::RustError("图片数据无效，仅支持 PNG data URL".to_string()))?;
+
+    if png_bytes.len() > 10 * 1024 * 1024 {
+        return json_with_status(
+            413,
+            &ApiResponse {
+                success: false,
+                message: "PNG 体积过大，请压缩到 10MB 以内".to_string(),
+            },
+            cors_origin,
+        );
     }
 
-    let pdf_bytes = build_simple_pdf(&title, &lines);
-
-    let mut response = Response::from_bytes(pdf_bytes)?.with_status(200);
+    let mut response = Response::from_bytes(png_bytes)?.with_status(200);
     let headers = response.headers_mut();
-    headers.set("Content-Type", "application/pdf")?;
+    headers.set("Content-Type", "image/png")?;
     headers.set(
         "Content-Disposition",
-        "attachment; filename=prescription-export.pdf",
+        "attachment; filename=prescription-export.png",
     )?;
     with_cors_headers(&mut response, cors_origin)?;
 

@@ -1686,6 +1686,41 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
 
               inputEl.replaceWith(textNode);
             });
+
+            clonedPaper.querySelectorAll('textarea').forEach((textareaEl) => {
+              const computed = docClone.defaultView ? docClone.defaultView.getComputedStyle(textareaEl) : null;
+              const textNode = docClone.createElement('div');
+              textNode.textContent = textareaEl.value || '';
+              textNode.style.display = 'block';
+              textNode.style.boxSizing = 'border-box';
+              textNode.style.width = computed ? computed.width : '100%';
+              textNode.style.minHeight = computed ? computed.height : '1em';
+              textNode.style.marginTop = computed ? computed.marginTop : '0';
+              textNode.style.marginBottom = computed ? computed.marginBottom : '0';
+              textNode.style.marginLeft = computed ? computed.marginLeft : '0';
+              textNode.style.marginRight = computed ? computed.marginRight : '0';
+              textNode.style.paddingTop = computed ? computed.paddingTop : '0';
+              textNode.style.paddingRight = computed ? computed.paddingRight : '0';
+              textNode.style.paddingBottom = computed ? computed.paddingBottom : '0';
+              textNode.style.paddingLeft = computed ? computed.paddingLeft : '0';
+              textNode.style.fontFamily = computed ? computed.fontFamily : 'inherit';
+              textNode.style.fontSize = computed ? computed.fontSize : '16px';
+              textNode.style.fontWeight = computed ? computed.fontWeight : 'normal';
+              textNode.style.letterSpacing = computed ? computed.letterSpacing : 'normal';
+              textNode.style.lineHeight = shrinkLineHeight(
+                computed ? computed.lineHeight : '',
+                '1.5'
+              );
+              textNode.style.textAlign = computed ? computed.textAlign : 'left';
+              textNode.style.color = computed ? computed.color : '#000';
+              textNode.style.whiteSpace = 'pre-wrap';
+              textNode.style.wordBreak = 'break-word';
+              textNode.style.overflowWrap = 'anywhere';
+              textNode.style.background = 'transparent';
+              textNode.style.border = 'none';
+
+              textareaEl.replaceWith(textNode);
+            });
           },
           useCORS: true,
           backgroundColor: '#ffffff'

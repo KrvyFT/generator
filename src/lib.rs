@@ -32,6 +32,56 @@ fn infer_request_origin(req: &Request) -> Option<String> {
     Some(format!("{}://{}", proto, host))
 }
 
+fn normalize_origin_like(value: &str) -> String {
+    value.trim().trim_end_matches('/').to_lowercase()
+}
+
+fn is_local_dev_origin(origin: &str) -> bool {
+    let origin = normalize_origin_like(origin);
+    for host in ["localhost", "127.0.0.1"] {
+        for scheme in ["http", "https"] {
+            let base = format!("{}://{}", scheme, host);
+            if origin == base || origin.starts_with(&format!("{}:", base)) {
+                return true;
+            }
+        }
+    }
+    origin == "null"
+}
+
+fn cors_origin_matches(allowed: &str, origin: &str) -> bool {
+    let allowed = normalize_origin_like(allowed);
+    let origin = normalize_origin_like(origin);
+
+    if allowed == origin {
+        return true;
+    }
+
+    if let Some(prefix) = allowed.strip_suffix(":*") {
+        return origin == prefix || origin.starts_with(&format!("{}:", prefix));
+    }
+
+    if allowed == "localhost" || allowed == "127.0.0.1" {
+        for scheme in ["http", "https"] {
+            let base = format!("{}://{}", scheme, allowed);
+            if origin == base || origin.starts_with(&format!("{}:", base)) {
+                return true;
+            }
+        }
+    }
+
+    for host in ["localhost", "127.0.0.1"] {
+        for scheme in ["http", "https"] {
+            let base = format!("{}://{}", scheme, host);
+            if allowed == base {
+                return origin == base || origin.starts_with(&format!("{}:", base));
+            }
+        }
+    }
+
+    false
+}
+
 fn resolve_cors_origin(req: &Request, env: &Env) -> (String, bool) {
     let request_origin = req
         .headers()
@@ -56,7 +106,10 @@ fn resolve_cors_origin(req: &Request, env: &Env) -> (String, bool) {
 
     if !allowlist.is_empty() {
         if let Some(origin) = request_origin {
-            if allowlist.iter().any(|v| v == &origin) {
+            if is_local_dev_origin(&origin) {
+                return (origin, true);
+            }
+            if allowlist.iter().any(|v| cors_origin_matches(v, &origin)) {
                 return (origin, true);
             }
             return (allowlist[0].clone(), false);
@@ -76,17 +129,67 @@ fn resolve_cors_origin(req: &Request, env: &Env) -> (String, bool) {
 
 #[event(fetch)]
 async fn fetch(req: HttpRequest, env: Env, _ctx: Context) -> Result<HttpResponse> {
-    let req = Request::try_from(req)?;
+    let mut req = Request::try_from(req)?;
     let path = req.path();
     let method = req.method();
-    let (cors_origin, origin_allowed) = resolve_cors_origin(&req, &env);
+    let (mut cors_origin, mut origin_allowed) = resolve_cors_origin(&req, &env);
+
+    let host_header = req
+        .headers()
+        .get("Host")
+        .ok()
+        .flatten()
+        .unwrap_or_default()
+        .to_lowercase();
+    let req_origin = req
+        .headers()
+        .get("Origin")
+        .ok()
+        .flatten()
+        .unwrap_or_default()
+        .trim()
+        .to_lowercase();
+
+    let url_host = req
+        .url()
+        .ok()
+        .and_then(|u| u.host_str().map(|s| s.to_string()))
+        .unwrap_or_default();
+    let host_is_local = host_header.starts_with("localhost")
+        || host_header.starts_with("127.0.0.1")
+        || url_host.starts_with("localhost")
+        || url_host.starts_with("127.0.0.1");
+
+    worker::console_log!(
+        "[CORS] path={} origin={} host={} url_host={} host_is_local={} origin_allowed={}",
+        path,
+        req_origin,
+        host_header,
+        url_host,
+        host_is_local,
+        origin_allowed
+    );
+
+    if host_is_local && path.starts_with("/api/") {
+        origin_allowed = true;
+        if !req_origin.is_empty() {
+            cors_origin = req_origin.clone();
+        } else {
+            cors_origin = "http://localhost".to_string();
+        }
+    }
 
     if path.starts_with("/api/") && !origin_allowed {
+        let _ = req.text().await;
+        worker::console_log!("[CORS] REJECTED origin={} host={}", req_origin, host_header);
         return json_with_status(
             403,
             &ApiResponse {
                 success: false,
-                message: "Origin not allowed".to_string(),
+                message: format!(
+                    "Origin not allowed (origin={}, host={})",
+                    req_origin, host_header
+                ),
             },
             &cors_origin,
         );

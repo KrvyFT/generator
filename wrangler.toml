@@ -11,7 +11,7 @@ command = "[ -x \"$HOME/.cargo/bin/worker-build\" ] || cargo install -q worker-b
 
 [vars]
 SUPPORT_EMAIL = "krvyft@pm.me"
-CORS_ORIGIN = "*"
+CORS_ORIGIN = "https://generator.psydrugs.org,http://generator.psydrugs.org,http://localhost,http://localhost:3000,http://localhost:5173,http://localhost:8787,https://localhost:8787,http://127.0.0.1,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:8787,https://127.0.0.1:8787,https://localhost,https://127.0.0.1"
 RATE_LIMIT_MAX = "5"
 RATE_LIMIT_WINDOW_SECS = "60"
 SESSION_TTL_SECS = "86400"

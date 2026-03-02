@@ -81,6 +81,15 @@ pub async fn register(mut req: Request, env: &Env, cors_origin: &str) -> Result<
         .map(|s| s.to_string())
         .or_else(|_| env.var("INVITE_CODE").map(|v| v.to_string()))
         .map_err(|_| Error::RustError("未配置 INVITE_CODE（Secret 或 Var）".to_string()))?;
+    let configured_invite_code = configured_invite_code.trim().to_string();
+
+    worker::console_log!(
+        "[REGISTER] invite_code='{}' (len={}) configured='{}' (len={})",
+        invite_code,
+        invite_code.len(),
+        configured_invite_code,
+        configured_invite_code.len()
+    );
 
     if invite_code != configured_invite_code {
         return json_with_status(

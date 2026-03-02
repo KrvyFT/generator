@@ -350,6 +350,7 @@
         const toolbar = document.querySelector("#workspaceCard .toolbar");
         const toolbarToggleBtn = document.getElementById("toolbarToggleBtn");
         let defaultNumberingApplied = false;
+        let currentUsername = "用户";
 
         function token() { return localStorage.getItem(TOKEN_KEY) || ""; }
         function setToken(v) { localStorage.setItem(TOKEN_KEY, v); }
@@ -376,6 +377,26 @@
                 headers,
                 body: body ? JSON.stringify(body) : undefined
             });
+        }
+
+        function buildSnapshotTitle() {
+            const safeUser = String(currentUsername || "用户").trim().replace(/\s+/g, "_").replace(/[^\w\u4e00-\u9fa5-]/g, "") || "用户";
+            const iso = new Date().toISOString().replace(/[:.]/g, "-");
+            return `${safeUser}-${iso}`;
+        }
+
+        async function saveWorkspaceSnapshot(title) {
+            const b = await waitBridge();
+            const state = b.exportState();
+            const resp = await callApi("/api/workspace/save", "POST", {
+                title,
+                payload: state
+            }, true);
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || !data.success) {
+                throw new Error(data.message || `保存失败（HTTP ${resp.status}）`);
+            }
+            return data;
         }
 
         async function applyRandomNumbering(showStatus = true) {
@@ -405,6 +426,7 @@
         function enterWorkspace(username) {
             authCard.classList.add("hidden");
             workspaceCard.classList.remove("hidden");
+            currentUsername = username || "用户";
             userHint.textContent = `当前用户：${username}`;
             ensureDefaultNumbering();
         }
@@ -412,6 +434,7 @@
         function backToAuth() {
             workspaceCard.classList.add("hidden");
             authCard.classList.remove("hidden");
+            currentUsername = "用户";
             userHint.textContent = "";
             showLoginPanel();
         }
@@ -555,14 +578,8 @@
         document.getElementById("saveBtn").onclick = async () => {
             workResult.textContent = "保存中...";
             try {
-                const b = await waitBridge();
-                const state = b.exportState();
-                const resp = await callApi("/api/workspace/save", "POST", {
-                    title: "presentation-workspace",
-                    payload: state
-                }, true);
-                const data = await resp.json().catch(() => ({}));
-                workResult.textContent = data.message || (resp.ok ? "保存成功" : `失败（HTTP ${resp.status}）`);
+                await saveWorkspaceSnapshot(buildSnapshotTitle());
+                workResult.textContent = "保存成功";
             } catch (err) {
                 workResult.textContent = `失败：${err.message || err}`;
             }
@@ -586,12 +603,15 @@
         };
 
         document.getElementById("pdfBtn").onclick = async () => {
-            workResult.textContent = "生成 PDF 中...";
+            workResult.textContent = "导出前自动保存中...";
             try {
                 const b = await waitBridge();
                 if (!b.capturePaperImage) {
                     throw new Error("功能页面不支持截图导出");
                 }
+
+                await saveWorkspaceSnapshot(buildSnapshotTitle());
+                workResult.textContent = "生成 PDF 中...";
 
                 const imageDataUrl = await b.capturePaperImage();
                 const state = b.exportState ? b.exportState() : {};
@@ -618,7 +638,7 @@
                 a.click();
                 a.remove();
                 URL.revokeObjectURL(url);
-                workResult.textContent = "PDF 下载已开始（后端生成）";
+                workResult.textContent = "已自动保存，PDF 下载已开始（后端生成）";
             } catch (err) {
                 workResult.textContent = `失败：${err.message || err}`;
             }

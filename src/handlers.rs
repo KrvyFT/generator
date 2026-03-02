@@ -437,8 +437,8 @@ pub async fn generate_pdf(mut req: Request, env: &Env, cors_origin: &str) -> Res
             .ok_or_else(|| Error::RustError("无法识别 JPEG 图片尺寸".to_string()))?;
 
         let (page_w, page_h) = match payload.page_mode.as_deref() {
-            Some("diagnosis") => (595.0_f64, 842.0_f64),
-            _ => (595.0_f64, 420.0_f64),
+            Some("diagnosis") => (595.28_f64, 841.89_f64),
+            _ => (595.28_f64, 419.53_f64),
         };
 
         let pdf_bytes = build_image_pdf(&jpeg_bytes, w, h, page_w, page_h);

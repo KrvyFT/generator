@@ -291,6 +291,11 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
     width: 350px;
     font-family: inherit;
     background: transparent;
+    margin-top: 16px;
+    line-height: 1.25;
+    height: 1.35em;
+    padding-top: 2px;
+    padding-bottom: 2px;
   }
 
   #pgFinalRoot #layout-diagnosis {
@@ -870,6 +875,38 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
       container: document.getElementById('dynamicElementsContainer'),
       watermark: document.getElementById('screenWatermark')
     };
+    const PAPER_CONFIG = {
+      prescription: {
+        page: '@page { size: A5 landscape; margin: 0; }',
+        widthMm: 210,
+        heightMm: 148,
+        toggleText: '🔀 切换为：A4 诊断证明'
+      },
+      diagnosis: {
+        page: '@page { size: A4 portrait; margin: 0; }',
+        widthMm: 210,
+        heightMm: 297,
+        toggleText: '🔀 切换为：A5 处方笺'
+      }
+    };
+
+    function mmToPx(mm) {
+      return (Number(mm) * 96) / 25.4;
+    }
+
+    function getPaperPixelSize(mode = state.mode) {
+      const conf = PAPER_CONFIG[mode === 'diagnosis' ? 'diagnosis' : 'prescription'];
+      const fallbackWidth = Math.round(mmToPx(conf.widthMm));
+      const fallbackHeight = Math.round(mmToPx(conf.heightMm));
+      if (!DOM.paper) {
+        return { width: fallbackWidth, height: fallbackHeight };
+      }
+      const rect = DOM.paper.getBoundingClientRect();
+      return {
+        width: Math.max(1, Math.round(rect.width || fallbackWidth)),
+        height: Math.max(1, Math.round(rect.height || fallbackHeight))
+      };
+    }
 
     function setScreenWatermarkVisible(visible) {
       if (!DOM.watermark) return;
@@ -989,8 +1026,9 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
       if (type === 'sign') wrapper.classList.add('draggable-sign-container');
       wrapper.id = id;
 
-      const paperWidth = state.mode === 'diagnosis' ? 794 : 800;
-      const paperHeight = state.mode === 'diagnosis' ? 1123 : 560;
+      const paperSize = getPaperPixelSize(state.mode);
+      const paperWidth = paperSize.width;
+      const paperHeight = paperSize.height;
       const posX = data.x !== undefined ? clampNumber(data.x, -2000, 4000, 0) : (paperWidth / 2 - 50 + (Math.random() * 100 - 50));
       const posY = data.y !== undefined ? clampNumber(data.y, -2000, 4000, 0) : (paperHeight / 2 - 50 + (Math.random() * 100 - 50));
       const rotate = clampNumber(data.rotate, -180, 180, 0);
@@ -1301,26 +1339,27 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
         state.mode = 'diagnosis';
         if (pLayout) pLayout.style.display = 'none';
         if (dLayout) dLayout.style.display = 'flex';
-        if (pageStyle) pageStyle.innerHTML = '@page { size: A4 portrait; margin: 0; }';
+        if (pageStyle) pageStyle.innerHTML = PAPER_CONFIG.diagnosis.page;
         if (paper) {
-          paper.style.width = '210mm';
-          paper.style.height = '297mm';
+          paper.style.width = `${PAPER_CONFIG.diagnosis.widthMm}mm`;
+          paper.style.height = `${PAPER_CONFIG.diagnosis.heightMm}mm`;
         }
-        if (toggleBtn) toggleBtn.innerText = '🔀 切换为：A5 处方笺';
+        if (toggleBtn) toggleBtn.innerText = PAPER_CONFIG.diagnosis.toggleText;
       } else {
         state.mode = 'prescription';
         if (pLayout) pLayout.style.display = 'flex';
         if (dLayout) dLayout.style.display = 'none';
-        if (pageStyle) pageStyle.innerHTML = '@page { size: A5 landscape; margin: 0; }';
+        if (pageStyle) pageStyle.innerHTML = PAPER_CONFIG.prescription.page;
         if (paper) {
-          paper.style.width = '210mm';
-          paper.style.height = '148mm';
+          paper.style.width = `${PAPER_CONFIG.prescription.widthMm}mm`;
+          paper.style.height = `${PAPER_CONFIG.prescription.heightMm}mm`;
         }
-        if (toggleBtn) toggleBtn.innerText = '🔀 切换为：A4 诊断证明';
+        if (toggleBtn) toggleBtn.innerText = PAPER_CONFIG.prescription.toggleText;
       }
 
-      const paperWidth = state.mode === 'diagnosis' ? 794 : 800;
-      const paperHeight = state.mode === 'diagnosis' ? 1123 : 560;
+      const paperSize = getPaperPixelSize(state.mode);
+      const paperWidth = paperSize.width;
+      const paperHeight = paperSize.height;
       if (state.elements.sealCircle) {
         state.elements.sealCircle.x = state.mode === 'diagnosis' ? (paperWidth / 2 - 85) : (paperWidth - 210);
         state.elements.sealCircle.y = state.mode === 'diagnosis' ? (paperHeight - 180) : (paperHeight - 210);
@@ -1548,16 +1587,73 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
       const target = document.getElementById('paperArea');
       if (!target) throw new Error('找不到纸张区域');
 
+      const prevActiveId = state.activeId;
+      const prevActiveEl = prevActiveId ? document.getElementById(prevActiveId) : null;
+      if (prevActiveEl) {
+        selectElement(null);
+      }
+
+      const rect = target.getBoundingClientRect();
+      const exportWidth = Math.max(1, Math.round(rect.width));
+      const exportHeight = Math.max(1, Math.round(rect.height));
+      const exportScale = Math.max(2, Math.min(3, window.devicePixelRatio || 1));
+
       setScreenWatermarkVisible(false);
       try {
         const canvas = await window.html2canvas(target, {
-          scale: 2,
+          width: exportWidth,
+          height: exportHeight,
+          scale: exportScale,
+          windowWidth: exportWidth,
+          windowHeight: exportHeight,
+          scrollX: 0,
+          scrollY: 0,
+          onclone: (docClone) => {
+            const clonedPaper = docClone.getElementById('paperArea');
+            if (!clonedPaper) return;
+
+            clonedPaper.querySelectorAll('input.hospital-input, input.diag-hosp-name').forEach((inputEl) => {
+              const computed = docClone.defaultView ? docClone.defaultView.getComputedStyle(inputEl) : null;
+              const textNode = docClone.createElement('div');
+              textNode.textContent = inputEl.value || '';
+              textNode.style.display = 'flex';
+              textNode.style.justifyContent = 'center';
+              textNode.style.alignItems = 'center';
+              textNode.style.boxSizing = 'border-box';
+              textNode.style.width = computed ? computed.width : '100%';
+              textNode.style.height = computed ? computed.height : 'auto';
+              textNode.style.marginTop = computed ? computed.marginTop : '0';
+              textNode.style.marginBottom = computed ? computed.marginBottom : '0';
+              textNode.style.marginLeft = 'auto';
+              textNode.style.marginRight = 'auto';
+              textNode.style.paddingTop = computed ? computed.paddingTop : '0';
+              textNode.style.paddingRight = computed ? computed.paddingRight : '0';
+              textNode.style.paddingBottom = computed ? computed.paddingBottom : '0';
+              textNode.style.paddingLeft = computed ? computed.paddingLeft : '0';
+              textNode.style.fontFamily = computed ? computed.fontFamily : 'inherit';
+              textNode.style.fontSize = computed ? computed.fontSize : '24px';
+              textNode.style.fontWeight = computed ? computed.fontWeight : 'normal';
+              textNode.style.letterSpacing = computed ? computed.letterSpacing : 'normal';
+              textNode.style.lineHeight = computed && computed.lineHeight && computed.lineHeight !== 'normal' ? computed.lineHeight : '1.25';
+              textNode.style.textAlign = 'center';
+              textNode.style.color = computed ? computed.color : '#000';
+              textNode.style.whiteSpace = 'pre-wrap';
+              textNode.style.overflow = 'visible';
+              textNode.style.background = 'transparent';
+              textNode.style.border = 'none';
+
+              inputEl.replaceWith(textNode);
+            });
+          },
           useCORS: true,
           backgroundColor: '#ffffff'
         });
         return canvas.toDataURL('image/jpeg', 0.92);
       } finally {
         setScreenWatermarkVisible(true);
+        if (prevActiveEl) {
+          selectElement(prevActiveEl);
+        }
       }
     }
 

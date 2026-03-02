@@ -292,7 +292,7 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
     font-family: inherit;
     background: transparent;
     margin-top: 16px;
-    line-height: 1.25;
+    line-height: 1.15;
     height: 1.35em;
     padding-top: 2px;
     padding-bottom: 2px;
@@ -357,7 +357,7 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
     font-size: 16px;
     margin-top: 5px;
     margin-bottom: 10px;
-    line-height: 1.8;
+    line-height: 1.5;
   }
 
   #pgFinalRoot .diag-info-grid.two-cols {
@@ -375,7 +375,7 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
 
   #pgFinalRoot .diag-text-block {
     font-size: 16px;
-    line-height: 2;
+    line-height: 1.6;
     margin-bottom: 15px;
     text-align: justify;
   }
@@ -395,7 +395,7 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
     background: transparent;
     font-family: inherit;
     font-size: 16px;
-    line-height: 2;
+    line-height: 1.6;
     overflow: hidden;
   }
 
@@ -408,7 +408,7 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
     justify-content: space-between;
     align-items: flex-end;
     font-size: 16px;
-    line-height: 1.8;
+    line-height: 1.5;
     border-bottom: 2px solid #000;
     padding-bottom: 5px;
     margin-bottom: 5px;
@@ -632,7 +632,7 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
                 </div>
 
                 <div style="display:flex;justify-content:center;gap:40px;font-size:13px;margin-bottom:5px;">
-                  <div style="display:flex;flex-direction:column;align-items:flex-end;line-height:1.6;">
+                  <div style="display:flex;flex-direction:column;align-items:flex-end;line-height:1.3;">
                     <div>定点医疗机构编码：<input id="medCodeInput" value="08110004"
                         style="border:none;background:transparent;outline:none;width:70px;font-family:inherit;font-size:13px;">
                     </div>
@@ -643,7 +643,7 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
                         style="border:none;background:transparent;outline:none;width:70px;font-family:inherit;font-size:13px;">
                     </div>
                   </div>
-                  <div style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.6;">
+                  <div style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.3;">
                     <div>就诊类型：<input value="门诊"
                         style="border:none;background:transparent;outline:none;width:50px;font-family:inherit;font-size:13px;">
                     </div>
@@ -692,7 +692,7 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
                       <span>℞</span>
                     </div>
                     <textarea id="a5Rx" oninput="App.syncContent('rx', this)"
-                      style="width:100%;flex-grow:1;border:none;outline:none;resize:none;font-family:inherit;font-size:14px;line-height:1.8;background:transparent;padding-left:5px;">
+                      style="width:100%;flex-grow:1;border:none;outline:none;resize:none;font-family:inherit;font-size:14px;line-height:1.55;background:transparent;padding-left:5px;">
 </textarea>
 
                     <div
@@ -1612,20 +1612,58 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
             const clonedPaper = docClone.getElementById('paperArea');
             if (!clonedPaper) return;
 
-            clonedPaper.querySelectorAll('input.hospital-input, input.diag-hosp-name').forEach((inputEl) => {
+            const compactStyle = docClone.createElement('style');
+            compactStyle.textContent = `
+              #pgFinalRoot .hospital-input { line-height: 1.08 !important; }
+              #pgFinalRoot .diag-info-grid { line-height: 1.42 !important; }
+              #pgFinalRoot .diag-text-block { line-height: 1.5 !important; }
+              #pgFinalRoot .diag-textarea { line-height: 1.5 !important; }
+              #pgFinalRoot .diag-footer-area { line-height: 1.42 !important; }
+            `;
+            if (docClone.head) {
+              docClone.head.appendChild(compactStyle);
+            }
+
+            clonedPaper.querySelectorAll('div[style*="line-height:1.6"]').forEach((el) => {
+              el.style.lineHeight = '1.25';
+            });
+            clonedPaper.querySelectorAll('textarea[style*="line-height:1.8"]').forEach((el) => {
+              el.style.lineHeight = '1.5';
+            });
+
+            const shrinkLineHeight = (lineHeightValue, fallbackValue) => {
+              if (!lineHeightValue || lineHeightValue === 'normal') return fallbackValue;
+              const value = String(lineHeightValue).trim();
+              const pxMatch = value.match(/^([0-9.]+)px$/);
+              if (pxMatch) {
+                const px = parseFloat(pxMatch[1]);
+                return `${Math.max(1, px * 0.88).toFixed(2)}px`;
+              }
+              const unitless = Number(value);
+              if (Number.isFinite(unitless) && unitless > 0) {
+                return `${(unitless * 0.88).toFixed(2)}`;
+              }
+              return value;
+            };
+
+            clonedPaper.querySelectorAll('input').forEach((inputEl) => {
+              const inputType = (inputEl.getAttribute('type') || 'text').toLowerCase();
+              if (['hidden', 'checkbox', 'radio', 'button', 'submit', 'reset', 'file', 'password'].includes(inputType)) {
+                return;
+              }
+
               const computed = docClone.defaultView ? docClone.defaultView.getComputedStyle(inputEl) : null;
-              const textNode = docClone.createElement('div');
-              textNode.textContent = inputEl.value || '';
-              textNode.style.display = 'flex';
-              textNode.style.justifyContent = 'center';
-              textNode.style.alignItems = 'center';
+              const textNode = docClone.createElement('span');
+              textNode.textContent = inputEl.value || inputEl.getAttribute('value') || '';
+              textNode.style.display = computed ? computed.display : 'inline-block';
               textNode.style.boxSizing = 'border-box';
               textNode.style.width = computed ? computed.width : '100%';
-              textNode.style.height = computed ? computed.height : 'auto';
+              textNode.style.height = 'auto';
+              textNode.style.minHeight = computed ? computed.height : '1em';
               textNode.style.marginTop = computed ? computed.marginTop : '0';
               textNode.style.marginBottom = computed ? computed.marginBottom : '0';
-              textNode.style.marginLeft = 'auto';
-              textNode.style.marginRight = 'auto';
+              textNode.style.marginLeft = computed ? computed.marginLeft : '0';
+              textNode.style.marginRight = computed ? computed.marginRight : '0';
               textNode.style.paddingTop = computed ? computed.paddingTop : '0';
               textNode.style.paddingRight = computed ? computed.paddingRight : '0';
               textNode.style.paddingBottom = computed ? computed.paddingBottom : '0';
@@ -1634,10 +1672,14 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
               textNode.style.fontSize = computed ? computed.fontSize : '24px';
               textNode.style.fontWeight = computed ? computed.fontWeight : 'normal';
               textNode.style.letterSpacing = computed ? computed.letterSpacing : 'normal';
-              textNode.style.lineHeight = computed && computed.lineHeight && computed.lineHeight !== 'normal' ? computed.lineHeight : '1.25';
-              textNode.style.textAlign = 'center';
+              textNode.style.lineHeight = shrinkLineHeight(
+                computed ? computed.lineHeight : '',
+                '1.08'
+              );
+              textNode.style.textAlign = computed ? computed.textAlign : 'left';
+              textNode.style.verticalAlign = 'baseline';
               textNode.style.color = computed ? computed.color : '#000';
-              textNode.style.whiteSpace = 'pre-wrap';
+              textNode.style.whiteSpace = 'pre';
               textNode.style.overflow = 'visible';
               textNode.style.background = 'transparent';
               textNode.style.border = 'none';

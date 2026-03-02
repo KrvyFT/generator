@@ -48,7 +48,7 @@ fn is_local_dev_origin(origin: &str) -> bool {
     }
     origin == "null"
 }
-
+// The fuck
 fn cors_origin_matches(allowed: &str, origin: &str) -> bool {
     let allowed = normalize_origin_like(allowed);
     let origin = normalize_origin_like(origin);

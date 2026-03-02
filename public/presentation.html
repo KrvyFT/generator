@@ -37,6 +37,31 @@ License: MIT + 自定义非商用附加条款（NC Addendum）
     box-sizing: border-box;
   }
 
+  #pgFinalRoot .paper input,
+  #pgFinalRoot .paper textarea,
+  #pgFinalRoot .paper select,
+  #pgFinalRoot .paper button {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    color: #000;
+    font: inherit;
+    line-height: inherit;
+    caret-color: #000;
+  }
+
+  #pgFinalRoot .paper [contenteditable] {
+    color: #000;
+    user-select: text;
+    -webkit-user-select: text;
+    caret-color: #000;
+  }
+
   #pgFinalRoot .warning-box {
     padding: 1rem;
     margin-bottom: 1rem;

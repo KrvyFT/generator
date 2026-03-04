@@ -1,0 +1,369 @@
+const API_BASE = window.API_BASE || "";
+const TOKEN_KEY = "generator_token";
+
+const authCard = document.getElementById("authCard");
+const workspaceCard = document.getElementById("workspaceCard");
+const authResult = document.getElementById("authResult");
+const workResult = document.getElementById("workResult");
+const userHint = document.getElementById("userHint");
+const presentationHost = document.getElementById("presentationHost");
+const loginPanel = document.getElementById("loginPanel");
+const registerPanel = document.getElementById("registerPanel");
+const toolbar = document.querySelector("#workspaceCard .toolbar");
+const toolbarToggleBtn = document.getElementById("toolbarToggleBtn");
+let defaultNumberingApplied = false;
+let currentUsername = "用户";
+let presentationLoadPromise = null;
+
+function token() { return localStorage.getItem(TOKEN_KEY) || ""; }
+function setToken(v) { localStorage.setItem(TOKEN_KEY, v); }
+function clearAuth() { localStorage.removeItem(TOKEN_KEY); }
+
+async function loadPresentationInline() {
+    if (window.PresentationBridge) return;
+    if (presentationLoadPromise) return presentationLoadPromise;
+
+    presentationLoadPromise = (async () => {
+        const resp = await fetch(`${API_BASE}/presentation`);
+        if (!resp.ok) {
+            throw new Error(`功能页面加载失败（HTTP ${resp.status}）`);
+        }
+
+        const html = await resp.text();
+        const container = document.createElement("div");
+        container.innerHTML = html;
+
+        const scripts = Array.from(container.querySelectorAll("script"));
+        scripts.forEach((script) => script.remove());
+
+        presentationHost.innerHTML = "";
+        while (container.firstChild) {
+            presentationHost.appendChild(container.firstChild);
+        }
+
+        for (const oldScript of scripts) {
+            const script = document.createElement("script");
+            if (oldScript.src) {
+                await new Promise((resolve, reject) => {
+                    script.src = oldScript.src;
+                    script.onload = () => resolve();
+                    script.onerror = () => reject(new Error(`脚本加载失败: ${oldScript.src}`));
+                    document.body.appendChild(script);
+                });
+            } else {
+                script.textContent = oldScript.textContent || "";
+                document.body.appendChild(script);
+            }
+        }
+    })();
+
+    try {
+        await presentationLoadPromise;
+    } finally {
+        presentationLoadPromise = null;
+    }
+}
+
+function bridge() {
+    return window.PresentationBridge;
+}
+
+async function waitBridge(timeout = 10000) {
+    await loadPresentationInline();
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+        if (bridge()) return bridge();
+        await new Promise(r => setTimeout(r, 100));
+    }
+    throw new Error("功能页面加载超时");
+}
+
+async function callApi(path, method = "GET", body = null, auth = false) {
+    const headers = { "Content-Type": "application/json" };
+    if (auth) headers.Authorization = `Bearer ${token()}`;
+    return fetch(`${API_BASE}${path}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined
+    });
+}
+
+function buildSnapshotTitle() {
+    const safeUser = String(currentUsername || "用户").trim().replace(/\s+/g, "_").replace(/[^\w\u4e00-\u9fa5-]/g, "") || "用户";
+    const iso = new Date().toISOString().replace(/[:.]/g, "-");
+    return `${safeUser}-${iso}`;
+}
+
+async function saveWorkspaceSnapshot(title) {
+    const b = await waitBridge();
+    const state = b.exportState();
+    const resp = await callApi("/api/workspace/save", "POST", {
+        title,
+        payload: state
+    }, true);
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok || !data.success) {
+        throw new Error(data.message || `保存失败（HTTP ${resp.status}）`);
+    }
+    return data;
+}
+
+async function applyRandomNumbering(showStatus = true) {
+    const b = await waitBridge();
+    const resp = await callApi("/api/prescription/random", "GET");
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok || !data.success) {
+        throw new Error(data.message || `HTTP ${resp.status}`);
+    }
+    if (b.applyRandomData) {
+        b.applyRandomData(data);
+    }
+    if (showStatus) {
+        workResult.textContent = "随机完成";
+    }
+}
+
+async function ensureDefaultNumbering() {
+    if (defaultNumberingApplied) return;
+    try {
+        await applyRandomNumbering(false);
+        defaultNumberingApplied = true;
+    } catch {
+    }
+}
+
+function enterWorkspace(username) {
+    authCard.classList.add("hidden");
+    workspaceCard.classList.remove("hidden");
+    currentUsername = username || "用户";
+    userHint.textContent = `当前用户：${username}`;
+    ensureDefaultNumbering();
+}
+
+function backToAuth() {
+    workspaceCard.classList.add("hidden");
+    authCard.classList.remove("hidden");
+    currentUsername = "用户";
+    userHint.textContent = "";
+    showLoginPanel();
+}
+
+function showLoginPanel() {
+    registerPanel.classList.add("hidden");
+    loginPanel.classList.remove("hidden");
+}
+
+function showRegisterPanel() {
+    loginPanel.classList.add("hidden");
+    registerPanel.classList.remove("hidden");
+}
+
+function updateToolbarToggleText(isCollapsed) {
+    if (!toolbarToggleBtn) return;
+    toolbarToggleBtn.textContent = isCollapsed ? "展开功能按钮" : "收起功能按钮";
+    toolbarToggleBtn.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
+}
+
+function setToolbarCollapsed(collapsed) {
+    if (!toolbar) return;
+    toolbar.classList.toggle("is-collapsed", collapsed);
+    updateToolbarToggleText(collapsed);
+}
+
+function setupMobileToolbarToggle() {
+    if (!toolbar || !toolbarToggleBtn) return;
+    const media = window.matchMedia("(max-width: 640px)");
+
+    const syncByViewport = () => {
+        if (media.matches) {
+            setToolbarCollapsed(true);
+        } else {
+            setToolbarCollapsed(false);
+        }
+    };
+
+    toolbarToggleBtn.onclick = () => {
+        const isCollapsed = toolbar.classList.contains("is-collapsed");
+        setToolbarCollapsed(!isCollapsed);
+    };
+
+    if (typeof media.addEventListener === "function") {
+        media.addEventListener("change", syncByViewport);
+    } else if (typeof media.addListener === "function") {
+        media.addListener(syncByViewport);
+    }
+
+    syncByViewport();
+}
+
+document.getElementById("toRegisterBtn").onclick = () => {
+    authResult.textContent = "";
+    showRegisterPanel();
+};
+
+document.getElementById("toLoginBtn").onclick = () => {
+    authResult.textContent = "";
+    showLoginPanel();
+};
+
+document.getElementById("registerBtn").onclick = async () => {
+    authResult.textContent = "注册中...";
+    const resp = await callApi("/api/register", "POST", {
+        username: document.getElementById("regUsername").value.trim(),
+        password: document.getElementById("regPassword").value,
+        invite_code: document.getElementById("regInvite").value.trim()
+    });
+    const data = await resp.json().catch(() => ({}));
+    authResult.textContent = data.message || `HTTP ${resp.status}`;
+    if (resp.ok && data.success) {
+        showLoginPanel();
+    }
+};
+
+document.getElementById("loginPassword").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+        document.getElementById("loginBtn").click();
+    }
+});
+
+document.getElementById("regInvite").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+        document.getElementById("registerBtn").click();
+    }
+});
+
+document.getElementById("loginBtn").onclick = async () => {
+    authResult.textContent = "登录中...";
+    const resp = await callApi("/api/login", "POST", {
+        username: document.getElementById("loginUsername").value.trim(),
+        password: document.getElementById("loginPassword").value
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (resp.ok && data.success && data.token) {
+        setToken(data.token);
+        enterWorkspace(data.username || "用户");
+        authResult.textContent = "登录成功";
+    } else {
+        authResult.textContent = data.message || `登录失败（HTTP ${resp.status}）`;
+    }
+};
+
+document.getElementById("aiBtn").onclick = async () => {
+    workResult.textContent = "AI 生成中...";
+    try {
+        const b = await waitBridge();
+        const state = b.exportState ? b.exportState() : {};
+        const formValues = (state && state.formValues) || {};
+        const diagText = String(formValues.a5Diag || formValues.a4Diag || "").trim();
+        if (!diagText) {
+            throw new Error("请先输入临床诊断");
+        }
+
+        const resp = await callApi("/api/prescription/generate", "POST", { diag_text: diagText }, true);
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.success || !data.result) {
+            throw new Error(data.message || `HTTP ${resp.status}`);
+        }
+
+        if (b.applyPrescriptionResult) {
+            b.applyPrescriptionResult(String(data.result).trim());
+        }
+        workResult.textContent = "AI 生成完成";
+    } catch (err) {
+        workResult.textContent = `失败：${err.message || err}`;
+    }
+};
+
+document.getElementById("randBtn").onclick = async () => {
+    workResult.textContent = "随机中...";
+    try {
+        await applyRandomNumbering(true);
+        defaultNumberingApplied = true;
+    } catch (err) {
+        workResult.textContent = `失败：${err.message || err}`;
+    }
+};
+
+document.getElementById("saveBtn").onclick = async () => {
+    workResult.textContent = "保存中...";
+    try {
+        await saveWorkspaceSnapshot(buildSnapshotTitle());
+        workResult.textContent = "保存成功";
+    } catch (err) {
+        workResult.textContent = `失败：${err.message || err}`;
+    }
+};
+
+document.getElementById("loadBtn").onclick = async () => {
+    workResult.textContent = "加载中...";
+    try {
+        const resp = await callApi("/api/workspace/latest", "GET", null, true);
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.success || !data.payload) {
+            workResult.textContent = data.message || `失败（HTTP ${resp.status}）`;
+            return;
+        }
+        const b = await waitBridge();
+        b.importState(data.payload);
+        workResult.textContent = `已加载：${data.title || "presentation-workspace"}`;
+    } catch (err) {
+        workResult.textContent = `失败：${err.message || err}`;
+    }
+};
+
+document.getElementById("pngBtn").onclick = async () => {
+    workResult.textContent = "导出前自动保存中...";
+    try {
+        const b = await waitBridge();
+        if (!b.capturePaperImage) {
+            throw new Error("功能页面不支持截图导出");
+        }
+
+        await saveWorkspaceSnapshot(buildSnapshotTitle());
+        workResult.textContent = "生成 PNG 中...";
+
+        const imageDataUrl = await b.capturePaperImage();
+
+        const resp = await callApi("/api/png/generate", "POST", {
+            image_data_url: imageDataUrl
+        }, true);
+
+        if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            throw new Error(errData.message || `HTTP ${resp.status}`);
+        }
+
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "prescription-export.png";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        workResult.textContent = "已自动保存，PNG 下载已开始（后端生成）";
+    } catch (err) {
+        workResult.textContent = `失败：${err.message || err}`;
+    }
+};
+
+document.getElementById("logoutBtn").onclick = () => {
+    clearAuth();
+    defaultNumberingApplied = false;
+    backToAuth();
+    workResult.textContent = "已退出";
+};
+
+setupMobileToolbarToggle();
+
+(async () => {
+    if (!token()) return;
+    const resp = await callApi("/api/me", "GET", null, true);
+    const data = await resp.json().catch(() => ({}));
+    if (resp.ok && data.success && data.user?.username) {
+        enterWorkspace(data.user.username);
+    } else {
+        clearAuth();
+    }
+})();

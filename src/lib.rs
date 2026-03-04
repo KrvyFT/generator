@@ -1,5 +1,6 @@
 mod auth;
 mod constants;
+mod crypto;
 mod handlers;
 mod models;
 mod response;
@@ -9,7 +10,7 @@ use std::convert::TryFrom;
 use worker::*;
 
 use models::ApiResponse;
-use response::{empty_with_status, html_with_status, json_with_status};
+use response::{empty_with_status, html_with_status, json_with_status, text_with_status};
 
 fn infer_request_origin(req: &Request) -> Option<String> {
     let host = req
@@ -201,12 +202,16 @@ async fn fetch(req: HttpRequest, env: Env, _ctx: Context) -> Result<HttpResponse
 
     if method == Method::Get && path == "/" {
         let html = include_str!("../public/app.html");
-        return html_with_status(200, html, &cors_origin);
+        let key_b64 = crypto::key_as_base64();
+        let html = html.replace("__SCRIPT_KEY__", &key_b64);
+        return html_with_status(200, &html, &cors_origin);
     }
 
     if method == Method::Get && path == "/presentation" {
         let html = include_str!("../public/presentation.html");
-        return html_with_status(200, html, &cors_origin);
+        let key_b64 = crypto::key_as_base64();
+        let html = html.replace("__SCRIPT_KEY__", &key_b64);
+        return html_with_status(200, &html, &cors_origin);
     }
 
     match (method, path.as_str()) {
@@ -226,6 +231,34 @@ async fn fetch(req: HttpRequest, env: Env, _ctx: Context) -> Result<HttpResponse
             handlers::generate_prescription(req, &env, &cors_origin).await
         }
         (Method::Get, "/api/prescription/random") => handlers::prescription_random(&cors_origin),
+        (Method::Get, "/api/script/app") => {
+            let js = include_str!("../public/app.js");
+            match crypto::encrypt_script(js) {
+                Ok(encrypted) => text_with_status(200, &encrypted, &cors_origin),
+                Err(e) => json_with_status(
+                    500,
+                    &ApiResponse {
+                        success: false,
+                        message: format!("Script encrypt error: {}", e),
+                    },
+                    &cors_origin,
+                ),
+            }
+        }
+        (Method::Get, "/api/script/presentation") => {
+            let js = include_str!("../public/presentation.js");
+            match crypto::encrypt_script(js) {
+                Ok(encrypted) => text_with_status(200, &encrypted, &cors_origin),
+                Err(e) => json_with_status(
+                    500,
+                    &ApiResponse {
+                        success: false,
+                        message: format!("Script encrypt error: {}", e),
+                    },
+                    &cors_origin,
+                ),
+            }
+        }
         (Method::Get, "/api/health") => json_with_status(
             200,
             &ApiResponse {

@@ -12,6 +12,16 @@ pub fn html_with_status(status: u16, html: &str, cors_origin: &str) -> Result<Ht
     HttpResponse::try_from(response)
 }
 
+pub fn text_with_status(status: u16, text: &str, cors_origin: &str) -> Result<HttpResponse> {
+    let mut response = Response::ok(text)?.with_status(status);
+    with_cors_headers(&mut response, cors_origin)?;
+    response
+        .headers_mut()
+        .set("Content-Type", "text/plain; charset=utf-8")?;
+    response.headers_mut().set("Cache-Control", "no-store")?;
+    HttpResponse::try_from(response)
+}
+
 pub fn json_with_status<T: serde::Serialize>(
     status: u16,
     body: &T,
@@ -40,7 +50,7 @@ pub fn with_cors_headers(response: &mut Response, cors_origin: &str) -> Result<(
     )?;
     headers.set(
         "Content-Security-Policy",
-        "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; upgrade-insecure-requests",
+        "default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; upgrade-insecure-requests",
     )?;
     Ok(())
 }
